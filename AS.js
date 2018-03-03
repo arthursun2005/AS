@@ -1,4 +1,4 @@
-function createCanvas(id, w = window.innerWidth, h = window.innerHeight){
+function createCanvas(id, w = window.innerWidth, h = window.innerHeight, sl){
 	if(!id){
 		throw new Error("Please enter an id in createCanvas()");
 		return;
@@ -8,11 +8,10 @@ function createCanvas(id, w = window.innerWidth, h = window.innerHeight){
 		h = window.innerHeight*arguments[1];
 	}
 	var ele = document.createElement("canvas");
-	ele.style = "width: "+w+"px;height: "+h+"px;border: 1px dashed;position: absolute;margin: 5%";
+	ele.style = sl || "width: "+w+"px;height: "+h+"px;border: 1px dashed;position: absolute;margin: 5%";
 	ele.id = id;
 	document.body.appendChild(ele);
 }
-createCanvas("example",3/4);
 function poly(){
 	var a = arguments;
 	function f(x){
@@ -112,6 +111,9 @@ Object.assign(Point.prototype, {
 	},
 	inverse: function(){
 		return new Point(1/this.x,1/this.y);
+	},
+	minus: function(){
+		return new Point(-this.x,-this.y);
 	},
 	dot: function(v){
 		return this.x*v.x+this.y*v.y;
@@ -244,10 +246,10 @@ function Draw(space){
 }
 Object.assign(Draw.prototype, {
 	noStroke: function(){
-		this.stroke = false
+		this.stroke = false;
 	},
 	noFill: function(){
-		this.stroke = false
+		this.fill = false;
 	},
 	strokeWeight: function(w){
 		this.lineWidth = strokeWeight;
@@ -266,13 +268,24 @@ Object.assign(Draw.prototype, {
 	},
 	stroke: function(r,g,b,a){
 		this.strokeColor = toHexColor(r,g,b,a);
+		this.stroke = true;
 	},
 	fill: function(r,g,b,a){
 		this.fillColor = toHexColor(r,g,b,a);
+		this.fill = true;
 	},
 	translate: function(x,y){
-		this.mx+=x;
-		this.my+=y;
+		if(!y){
+			try{
+				this.mx+=x.x;
+				this.my+=x.y;
+			}catch(e){
+				throw e;
+			}
+		}else{
+			this.mx+=x;
+			this.my+=y;
+		}
 	},
 	rotate: function(a){
 		this.a+=a;
@@ -397,6 +410,20 @@ Object.assign(Draw.prototype, {
 		if(this.fill) this.d.fill();
 		this.f0();
 	},
+	quad: function(x1,y1,x2,y2,x3,y3,x4,y4){
+		this.d.beginPath();
+		this.s0();
+		this.d.lineWidth = this.lineWidth;
+		this.d.strokeStyle = this.strokeColor;
+		this.d.fillStyle = this.fillColor;
+		this.d.moveTo(x1,y1); this.d.lineTo(x2,y2);
+		this.d.moveTo(x2,y2); this.d.lineTo(x3,y3);
+		this.d.moveTo(x3,y3); this.d.lineTo(x4,y4);
+		this.d.moveTo(x4,y4); this.d.lineTo(x1,y1);
+		if(this.stroke) this.d.stroke();
+		if(this.fill) this.d.fill();
+		this.f0();
+	},
 	text: function(t,x,y){
 		this.d.beginPath();
 		this.s0();
@@ -471,13 +498,15 @@ Object.assign(Geometry, {
 	},
 	Graph: function(){}
 });
-Geometry.Graph.constructor = function(x,y){
+Geometry.Graph.constructor = function(x,y,f){
 	this.origin = new Point(x,y);
 	this.isComplexPlane = false;
 	this.drawNumbers = true;
 	this.numberScale = 1;
+	this.rotation = 0;
 	this.numbersColor = "#000000";
 	this.drawGridLines = true;
+	this.gridLinesWeight = 1;
 	this.gridLinesColor = "#333333";
 	this.axisData = {
 		x: {
@@ -485,21 +514,37 @@ Geometry.Graph.constructor = function(x,y){
 			color: "#000000",
 			draw: true,
 			spacing: 10,
-			start: -100,
-			end: 100
+			start: -200,
+			end: 200,
+			weight: 1
 		},
 		y: {
 			scale: 1,
 			color: "#000000",
 			draw: true,
 			spacing: 10,
-			start: -100,
-			end: 100
+			start: -200,
+			end: 200,
+			weight: 1
 		}
 	};
-}
+	this.f = f;
+};
 Object.assign(Geometry.Graph.prototype, {
-	draw: function(){
+	draw: function(d){
+		d.translate(this.origin);
+		d.rotate(this.rotation);
+		var ad = this.axisData;
+		if(ad.x.draw){
+			d.strokeWeight(ad.x.weight);
+			d.line(ad.x.start*ad.x.scale,0,ad.x.end*ad.x.scale,0);
+		}
+		if(ad.y.draw){
+			d.strokeWeight(ad.y.weight);
+			d.line(ad.y.start*ad.y.scale,0,ad.y.end*ad.y.scale,0);
+		}
+		d.rotate(-this.rotation);
+		d.translate(this.origin.minus());
 	}
 });
 Object.assign(Physics, {
@@ -515,12 +560,10 @@ Physics.Particle.constructor = function(x,y){
 	this.lifeTime = 0;
 	this.fixed = false;
 };
-Object.assign(Physics.Particle.prototype, {
-	update: function(){
-		if(!this.fixed) this.p.add(this.v);
-		this.age++;
-	}
-});
+Physics.Particle.prototype.update = function(){
+	if(!this.fixed) this.p.add(this.v);
+	this.age++;
+};
 Physics.ParticleGroup.constructor = function(){
 	this.forces = {
 		viscous: 0.2,
@@ -530,21 +573,35 @@ Physics.ParticleGroup.constructor = function(){
 		tensile: 0,
 		powder: 0
 	};
-	this.powder = false;
+	this.powderParticles = false;
 	this.w1 = 0.9;
+	this.ps = [];
 };
 Object.assign(Physics.ParticleGroup.prototype, {
 });
 Physics.ParticleSystem.constructor = function(){
 	this.w0 = 0.7;
 	this.GroupList = [];
+	this.ps = [];
 };
 Object.assign(Physics.ParticleSystem.prototype, {
+	addParticle: function(){
+	},
+	addGroup: function(){
+	},
+	getMaxRadius: function(){
+	},
+	solve: function(){
+	},
+	update: function(){
+	}
 });
 Physics.Obj.constructor = function(){
 	this.vertexs = [];
 };
 Object.assign(Physics.Obj.prototype, {
+	update: function(){
+	}
 });
 function SlideShow(){
 	this.slides = [];
