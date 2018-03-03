@@ -8,7 +8,8 @@ function createCanvas(id, w = window.innerWidth, h = window.innerHeight, sl){
 		h = window.innerHeight*arguments[1];
 	}
 	var ele = document.createElement("canvas");
-	ele.style = sl || "width: "+w+"px;height: "+h+"px;border: 1px dashed;position: absolute;margin: 5%";
+	ele.style = sl || "border: dashed 1px #000000;position: absolute;margin: 5%";
+	ele.width = w, ele.height = h;
 	ele.id = id;
 	document.body.appendChild(ele);
 }
@@ -20,6 +21,13 @@ function poly(){
 		return value;
 	}
 	return f;
+}
+function isArray(obj){
+	if(typeof obj == "object" && (obj.length || typeof obj.push == "function")){
+		return true;
+	}else{
+		return false;
+	}
 }
 Math.Area = {
 	triangle: function(a,b,c){
@@ -228,9 +236,9 @@ function Draw(space){
 	this.fillColor = "#ffffffff";
 	this.strokeColor = "#000000ff";
 	this.lineWidth = 1;
-	this.fill = true;
-	this.stroke = true;
 
+	this._fill = true;
+	this._stroke = true;
 	this._textSize = 21;
 	this._font = "monospace";
 	this._textAlign = "center";
@@ -238,7 +246,8 @@ function Draw(space){
 	this.mx = 0;
 	this.my = 0;
 	this.a = 0;
-	this.s = 1;
+	this.sx = 1;
+	this.sy = 1;
 	this.rectAlign = "corner";
 	this.d = this.space.getContext("2d");
 	this.d0 = this.space.getContext("2d");
@@ -252,7 +261,7 @@ Object.assign(Draw.prototype, {
 		this.fill = false;
 	},
 	strokeWeight: function(w){
-		this.lineWidth = strokeWeight;
+		this.lineWidth = w;
 	},
 	rectMode: function(m){
 		this.rectAlign = m;
@@ -267,12 +276,20 @@ Object.assign(Draw.prototype, {
 		this._font = f;
 	},
 	stroke: function(r,g,b,a){
+		this._stroke = true;
+		if(!g){
+			this.strokeColor = r;
+			return;
+		}
 		this.strokeColor = toHexColor(r,g,b,a);
-		this.stroke = true;
 	},
 	fill: function(r,g,b,a){
+		this._fill = true;
+		if(!g){
+			this.fillColor = r;
+			return;
+		}
 		this.fillColor = toHexColor(r,g,b,a);
-		this.fill = true;
 	},
 	translate: function(x,y){
 		if(!y){
@@ -290,26 +307,32 @@ Object.assign(Draw.prototype, {
 	rotate: function(a){
 		this.a+=a;
 	},
-	scale: function(s){
-		this.s*=s;
+	scale: function(sx,sy){
+		if(!sy){
+			this.sx*=sx;
+			this.sy*=sx;
+			return
+		}
+		this.sx*=sx;
+		this.sy*=sy;
 	},
 	s0: function(){
 		this.d.translate(this.mx,this.my);
 		this.d.rotate(this.a);
-		this.d.scale(this.s);
+		this.d.scale(this.sx,this.sy);
 	},
 	f0: function(){
-		this.d.scale(1/this.s);
+		this.d.scale(1/this.sx,1/this.sy);
 		this.d.rotate(-this.a);
 		this.d.translate(-this.mx,-this.my);
 	},
 	s1: function(){
 		this.d0.translate(this.mx,this.my);
 		this.d0.rotate(this.a);
-		this.d0.scale(this.s);
+		this.d0.scale(this.sx,this.sy);
 	},
 	f1: function(){
-		this.d0.scale(1/this.s);
+		this.d0.scale(1/this.sx,1/this.sy);
 		this.d0.rotate(-this.a);
 		this.d0.translate(-this.mx,-this.my);
 	},
@@ -320,18 +343,19 @@ Object.assign(Draw.prototype, {
 		this.s = 1;
 	},
 	line: function(x1,y1,x2,y2){
-		this.d.beginPath();
+		d = this.space.getContext("2d");
+		d.beginPath();
 		this.s0();
 		this.d.lineWidth = this.lineWidth;
 		this.d.strokeStyle = this.strokeColor;
-		this.d.moveTo(x1,y1);
-		this.d.lineTo(x2,y2);
-		if(this.stroke) this.d.stroke();
+		d.moveTo(x1,y1);
+		d.lineTo(x2,y2);
+		if(this._stroke) d.stroke();
 		this.f0();
 	},
 	rect: function(x,y,w,h,r){
 		if(!r){
-			if(!this.fill && this.stroke){
+			if(!this._fill && this._stroke){
 				this.d.beginPath();
 				if(this.rectAlign == "center") this.d.translate(-w/2,-h/2);
 				this.s0();
@@ -341,7 +365,7 @@ Object.assign(Draw.prototype, {
 				this.f0();
 				if(this.rectAlign == "center") this.d.translate(w/2,h/2);
 			}
-			if(!this.stroke && this.fill){
+			if(!this._stroke && this._fill){
 				this.d.beginPath();
 				if(this.rectAlign == "center") this.d.translate(-w/2,-h/2);
 				this.s0();
@@ -351,7 +375,7 @@ Object.assign(Draw.prototype, {
 				this.f0();
 				if(this.rectAlign == "center") this.d.translate(w/2,h/2);
 			}
-			if(this.stroke && this.fill){
+			if(this._stroke && this._fill){
 				this.d.beginPath();
 				if(this.rectAlign == "center") this.d.translate(-w/2,-h/2);
 				this.s0();
@@ -380,8 +404,8 @@ Object.assign(Draw.prototype, {
 			this.d.lineWidth = this.lineWidth;
 			this.d.fillStyle = this.fillColor;
 			this.d.strokeStyle = this.strokeColor;
-			if(this.stroke) this.d.stroke();
-			if(this.fill) this.d.fill();
+			if(this._stroke) this.d.stroke();
+			if(this._fill) this.d.fill();
 			this.f0();
 			if(this.rectAlign == "center") this.d.translate(w/2,h/2);
 		}
@@ -393,8 +417,8 @@ Object.assign(Draw.prototype, {
 		this.d.lineWidth = this.lineWidth;
 		this.d.fillStyle = this.fillColor;
 		this.d.strokeStyle = this.strokeColor;
-		if(this.stroke) this.d.stroke();
-		if(this.fill) this.d.fill();
+		if(this._stroke) this.d.stroke();
+		if(this._fill) this.d.fill();
 		this.f0();
 	},
 	triangle: function(x1,y1,x2,y2,x3,y3){
@@ -406,8 +430,8 @@ Object.assign(Draw.prototype, {
 		this.d.moveTo(x1,y1); this.d.lineTo(x2,y2);
 		this.d.moveTo(x2,y2); this.d.lineTo(x3,y3);
 		this.d.moveTo(x3,y3); this.d.lineTo(x1,y1);
-		if(this.stroke) this.d.stroke();
-		if(this.fill) this.d.fill();
+		if(this._stroke) this.d.stroke();
+		if(this._fill) this.d.fill();
 		this.f0();
 	},
 	quad: function(x1,y1,x2,y2,x3,y3,x4,y4){
@@ -420,55 +444,66 @@ Object.assign(Draw.prototype, {
 		this.d.moveTo(x2,y2); this.d.lineTo(x3,y3);
 		this.d.moveTo(x3,y3); this.d.lineTo(x4,y4);
 		this.d.moveTo(x4,y4); this.d.lineTo(x1,y1);
-		if(this.stroke) this.d.stroke();
-		if(this.fill) this.d.fill();
+		if(this._stroke) this.d.stroke();
+		if(this._fill) this.d.fill();
 		this.f0();
 	},
 	text: function(t,x,y){
 		this.d.beginPath();
 		this.s0();
 		this.d.fillStyle = this.fillColor;
-		d.textAlign = this._textAlign;
-		d.font = this._font+" "+this._textSize;
-		d.fillText(t, x, y);
-		if(this.stroke) this.d.stroke();
-		if(this.fill) this.d.fill();
+		this.d.textAlign = this._textAlign;
+		this.d.font = this._textSize+"px "+this._font;
+		if(arguments.length == 2){
+			this.d.fillText(t, x.x, x.y);
+		}else{
+			this.d.fillText(t, x, y);
+		}
+		if(this._stroke) this.d.stroke();
+		if(this._fill) this.d.fill();
 		this.f0();
 	},
 	strokeText: function(t,x,y){
 		this.d.beginPath();
 		this.s0();
 		this.d.strokeStyle = this.strokeColor;
-		d.textAlign = this._textAlign;
-		d.font = this._font+" "+this._textSize;
-		d.strokeText(t, x, y);
-		if(this.stroke) this.d.stroke();
-		if(this.fill) this.d.fill();
+		this.d.textAlign = this._textAlign;
+		this.d.font = this._textSize+"px "+this._font;
+		if(arguments.length == 2){
+			this.d.fillText(t, x.x, x.y);
+		}else{
+			this.d.strokeText(t, x, y);
+		}
+		if(this._stroke) this.d.stroke();
 		this.f0();
 	},
 	beginShape: function(){
 		this.d0.beginPath();
 		this.s1();
+		this.d1 = false;
 	},
 	vertex: function(x,y){
 		if(this.d1){
-			this.d.lineTo(x,y);
+			this.d0.moveTo(this.last.x,this.last.y);
+			this.d0.lineTo(x,y);
+			this.last = new Point(x,y);
 		}else{
-			this.d.moveTo(x,y);
+			//this.d0.moveTo(x,y);
 			this.d1 = true;
+			this.last = new Point(x,y);
 			this.start = new Point(x,y);
 		}
 	},
 	endShape: function(){
-		this.d.moveTo(this.start.x,this.start.y);
-		if(!this.d1) return;
+		//this.d0.moveTo(this.last.x,this.last.y);
+		//this.d0.lineTo(this.start.x,this.start.y);
 		this.d0.lineWidth = this.lineWidth;
 		this.d0.strokeStyle = this.strokeColor;
 		this.d0.fillStyle = this.fillColor;
-		if(this.stroke) this.d.stroke();
-		if(this.fill) this.d.fill();
+		if(this._stroke) this.d.stroke();
+		if(this._fill) this.d.fill();
 		this.f1();
-		this.dl = false;
+		this.d1 = false;
 	}
 });
 const Geometry = {};
@@ -498,53 +533,134 @@ Object.assign(Geometry, {
 	},
 	Graph: function(){}
 });
-Geometry.Graph.constructor = function(x,y,f){
+Geometry.Graph = function(x,y,f){
 	this.origin = new Point(x,y);
-	this.isComplexPlane = false;
+	this.isComplexPlane = true;
 	this.drawNumbers = true;
-	this.numberScale = 1;
+	this.numberScale = 0.4;
 	this.rotation = 0;
 	this.numbersColor = "#000000";
+	this.font = "italic";
 	this.drawGridLines = true;
 	this.gridLinesWeight = 1;
-	this.gridLinesColor = "#333333";
+	this.gridLinesColor = "#00000055";
+	this.graphLineColor = "#ff00ff";
 	this.axisData = {
 		x: {
 			scale: 1,
 			color: "#000000",
 			draw: true,
-			spacing: 10,
-			start: -200,
-			end: 200,
+			spacing: 40,
+			start: -300,
+			end: 300,
 			weight: 1
 		},
 		y: {
 			scale: 1,
 			color: "#000000",
 			draw: true,
-			spacing: 10,
-			start: -200,
-			end: 200,
+			spacing: 40,
+			start: -300,
+			end: 300,
 			weight: 1
 		}
 	};
 	this.f = f;
+	this.dx = 1/100;
 };
 Object.assign(Geometry.Graph.prototype, {
-	draw: function(d){
+	graph: function(d){
+		var ad = this.axisData;
 		d.translate(this.origin);
 		d.rotate(this.rotation);
+		d.scale(ad.x.scale,ad.y.scale);
+		d.beginShape();
+		d.noFill();
+		d.stroke(this.graphLineColor);
+		for(var x=ad.x.start;x<ad.x.end;x+=this.dx){
+			var v = x*this.numberScale;
+			d.vertex(v/this.numberScale,this.f(v)/this.numberScale);
+		}
+		d.endShape();
+		d.scale(1/ad.x.scale,1/ad.y.scale);
+		d.rotate(-this.rotation);
+		d.translate(this.origin.minus());
+	},
+	draw: function(d){
 		var ad = this.axisData;
+		d.translate(this.origin);
+		d.rotate(this.rotation);
+		d.scale(ad.x.scale,ad.y.scale);
 		if(ad.x.draw){
 			d.strokeWeight(ad.x.weight);
-			d.line(ad.x.start*ad.x.scale,0,ad.x.end*ad.x.scale,0);
+			d.stroke(ad.x.color);
+			d.line(ad.x.start,0,ad.x.end,0);
 		}
 		if(ad.y.draw){
 			d.strokeWeight(ad.y.weight);
-			d.line(ad.y.start*ad.y.scale,0,ad.y.end*ad.y.scale,0);
+			d.stroke(ad.y.color);
+			d.line(0,ad.y.start,0,ad.y.end);
 		}
+		if(this.drawNumbers){
+			var size;
+			d.fill(this.numbersColor);
+			d.font(this.font);
+			d.textAlign("center");
+			var c0 = 22, c1 = 1.75;
+			for(var i=0;i<ad.x.end;i+=ad.x.spacing){
+				var value = (i*this.numberScale).toFixed(2);
+				size = ad.x.spacing/(Math.pow(value.toString().length,1/2)*c1);
+				d.textSize(size);
+				var pos = new Point(i, 10);
+				if(i == 0) pos.x-=10;
+				d.text(value,pos);
+			}
+			for(var i=-ad.x.spacing;i>ad.x.start;i-=ad.x.spacing){
+				var value = (i*this.numberScale).toFixed(2);
+				size = ad.x.spacing/(Math.pow(value.toString().length,1/2)*c1);
+				d.textSize(size);
+				var pos = new Point(i, 10);
+				d.text(value,pos);
+			}
+			for(var i=ad.y.spacing;i<ad.y.end;i+=ad.y.spacing){
+				var pos = new Point(-15,i);
+				var value = (i*this.numberScale).toFixed(2);
+				size = ad.y.spacing/(Math.pow(value.toString().length,1/2)*c1);
+				if(this.isComplexPlane) value+="i";
+				d.textSize(size);
+				d.text(value,pos);
+			}
+			for(var i=-ad.y.spacing;i>ad.y.start;i-=ad.y.spacing){
+				var pos = new Point(-15,i);
+				var value = (i*this.numberScale).toFixed(2);
+				size = ad.y.spacing/(Math.pow(value.toString().length,1/2)*c1);
+				if(this.isComplexPlane) value+="i";
+				d.textSize(size);
+				d.text(value,pos);
+			}
+		}
+		if(this.drawGridLines){
+			d.stroke(this.gridLinesColor);
+			for(var i=ad.x.spacing;i<ad.x.end;i+=ad.x.spacing){
+				d.line(i,ad.y.start,i,ad.y.end);
+			}
+			for(var i=-ad.x.spacing;i>ad.x.start;i-=ad.x.spacing){
+				d.line(i,ad.y.start,i,ad.y.end);
+			}
+			for(var i=ad.y.spacing;i<ad.y.end;i+=ad.y.spacing){
+				d.line(ad.x.start,i,ad.x.end,i);
+			}
+			for(var i=-ad.y.spacing;i>ad.y.start;i-=ad.y.spacing){
+				d.line(ad.x.start,i,ad.x.end,i);
+			}
+		}
+		d.scale(1/ad.x.scale,1/ad.y.scale);
 		d.rotate(-this.rotation);
 		d.translate(this.origin.minus());
+		this.graph(d);
+	},
+	int: function(a,b){
+		var start, finish;
 	}
 });
 Object.assign(Physics, {
@@ -553,7 +669,7 @@ Object.assign(Physics, {
 	ParticleSystem: function(){},
 	Obj: function(){}
 });
-Physics.Particle.constructor = function(x,y){
+Physics.Particle = function(x,y){
 	this.p = new Point(x,y);
 	this.v = new Point();
 	this.age = 0;
@@ -564,7 +680,7 @@ Physics.Particle.prototype.update = function(){
 	if(!this.fixed) this.p.add(this.v);
 	this.age++;
 };
-Physics.ParticleGroup.constructor = function(){
+Physics.ParticleGroup = function(){
 	this.forces = {
 		viscous: 0.2,
 		pressure: 0.3,
@@ -578,25 +694,29 @@ Physics.ParticleGroup.constructor = function(){
 	this.ps = [];
 };
 Object.assign(Physics.ParticleGroup.prototype, {
+	addParticle: function(p){
+		this.ps.push(p);
+	}
 });
-Physics.ParticleSystem.constructor = function(){
+Object.assign(Physics.ParticleGroup, {
+	create: function(){
+	}
+});
+Physics.ParticleSystem = function(){
 	this.w0 = 0.7;
-	this.GroupList = [];
-	this.ps = [];
+	this.GroupLists = [];
 };
 Object.assign(Physics.ParticleSystem.prototype, {
-	addParticle: function(){
+	getMaxRadius: function(){
 	},
 	addGroup: function(){
-	},
-	getMaxRadius: function(){
 	},
 	solve: function(){
 	},
 	update: function(){
 	}
 });
-Physics.Obj.constructor = function(){
+Physics.Obj = function(){
 	this.vertexs = [];
 };
 Object.assign(Physics.Obj.prototype, {

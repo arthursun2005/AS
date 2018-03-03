@@ -4,10 +4,16 @@
 	<title>Home Page AS game library</title>
 </head>
 <body>
-	<a href="">hello</a>
 </body>
 <script src="AS.js"></script>
 <script type="text/javascript">
-	createCanvas("example",3/4);
+	createCanvas("example",4/5);
+	var space = document.getElementById('example');
+	var center = new Point(space.width/2,space.height/2);
+	var tool = new Draw(space);
+	function run(){
+		setTimeout(run, 5);
+	}
+	run();
 </script>
 </html>
