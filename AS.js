@@ -243,7 +243,22 @@ Object.assign(Point, {
 	},
 	equals: function(a,b){
 		return a.equals(b);
-	}
+	},
+	floor: function(a){
+		return a.copy().floor();
+	},
+	round: function(a){
+		return a.copy().round();
+	},
+	ceil: function(a){
+		return a.copy().ceil();
+	},
+	inverse: function(a){
+		return new Point(1/a.x,1/a.y);
+	},
+	minus: function(a){
+		return new Point(-a.x,-a.y);
+	},
 });
 function Draw(space){
 	this.space = space;
@@ -362,8 +377,13 @@ Object.assign(Draw.prototype, {
 		this.s0();
 		this.d.lineWidth = this.lineWidth;
 		this.d.strokeStyle = this.strokeColor;
-		d.moveTo(x1,y1);
-		d.lineTo(x2,y2);
+		if(arguments.length == 2 && x1 instanceof Point && x2 instanceof Point){
+			d.moveTo(x1.x,x1.y);
+			d.lineTo(y1.x,y1.y);
+		}else{
+			d.moveTo(x1,y1);
+			d.lineTo(x2,y2);
+		}
 		if(this._stroke) d.stroke();
 		this.f0();
 	},
@@ -725,11 +745,7 @@ Object.assign(Geometry.Graph.prototype, {
 			start = a;
 			finish = b;
 		}
-		var sum = 0;
-		for(var i=start;i<finish;i+=Math.dx){
-			sum+=this.f(i);
-		}
-		return sum/((finish-start)/Math.dx);
+		return this.int(start,finish)/(finish-start);
 	}
 });
 Geometry.Line = function(){
@@ -751,6 +767,33 @@ Object.assign(Geometry.Line.prototype, {
 	},
 	length: function(){
 		return dist(this.p1,this.p2);
+	},
+	draw: function(){
+		d.strokeWeight(1);
+		d.stroke(255,0,255);
+		d.line(this.p1,this.p2);
+	},
+	center: function(){
+		var p = Point.add(this.p1,this.p2);
+		return Point.scale(p,1/2);
+	},
+	rotateAroundP1: function(a){
+		p2.sub(p1);
+		p2.rotate(a);
+		p2.add(p1);
+	},
+	rotateAroundCenter: function(a){
+		p2.sub(this.center());
+		p1.sub(this.center());
+		p2.rotate(a);
+		p1.rotate(a);
+		p2.add(this.center());
+		p1.add(this.center());
+	},
+	rotateAroundP2: function(a){
+		p1.sub(p2);
+		p1.rotate(a);
+		p1.add(p2);
 	}
 });
 Object.assign(Physics, {
@@ -767,9 +810,11 @@ Physics.Particle = function(x,y){
 	this.fixed = false;
 	this.group = null;
 	this.r = null;
+	this.weight = 0;
+	this.pressure = 0;
 };
 Physics.Particle.prototype.draw = function(){
-	throw new Error('use Physics.ParticleGroup.prototype.draw instead');
+	throw new Error('Use Physics.ParticleGroup.prototype.draw or Physics.ParticleSystem.prototype.draw instead');
 };
 Physics.Particle.prototype.update = function(){
 	if(!this.fixed) this.p.add(this.v);
@@ -798,7 +843,7 @@ Physics.ParticleGroup = function(){
 	this.w1 = 0.9;
 	this.ps = [];
 	this.rs = 2;
-	this.c = "#000000";
+	this.c = "#ffffff84";
 };
 Object.assign(Physics.ParticleGroup.prototype, {
 	addParticle: function(p){
@@ -814,6 +859,12 @@ Object.assign(Physics.ParticleGroup.prototype, {
 		this.c = toHexColor(r,g,b,a);
 	},
 	draw: function(d){
+		for (var i = this.ps.length - 1; i >= 0; i--) {
+			var p = this.ps[i];
+			d.translate(p.p);
+			d.ellipse(0,0,this.rs,this.rs);
+			d.translate(p.p.minus());
+		}
 	}
 });
 Physics.ParticleSystem = function(){
@@ -825,10 +876,12 @@ Physics.ParticleSystem = function(){
 };
 Object.assign(Physics.ParticleSystem.prototype, {
 	split: function(){
-		var ps = this.ps;
+		this.ps = [];
 		for (var i = this.GroupLists.length - 1; i >= 0; i--) {
 			var g = this.GroupLists[i];
-			for (var j = g.ps.length - 1; j >= 0; j--) ps.push(g.ps[j]);
+			for (var j = g.ps.length - 1; j >= 0; j--){
+				this.ps.push(g.ps[j]);
+			}
 		}
 	},
 	_ps: function(){
@@ -845,6 +898,7 @@ Object.assign(Physics.ParticleSystem.prototype, {
 		this.getMaxRadius();
 	},
 	sort: function(){
+		var all = this.all;
 		var ps = this.ps;
 		var maxD = this.maxRadius*2;
 		var minP = ps[0].p.copy();
@@ -852,10 +906,64 @@ Object.assign(Physics.ParticleSystem.prototype, {
 			if(ps[i].p.x<minP.x) minP.x = ps[i].p.x;
 			if(ps[i].p.y<minP.y) minP.y = ps[i].p.y;
 		}
+		for (var i = ps.length - 1; i >= 0; i--) {
+			var p = ps[i];
+			var x = Math.floor((p.p.x-minP.x)/maxD),
+				y = Math.floor((p.p.y-minP.y)/maxD);
+			if(!all[y]) all[y] = [];
+			if(!all[y][x]) all[y][x] = [];
+			all[y][x].push({obj: p, id: i});
+		}
 	},
 	solve: function(){
+		var obj, p2, D, d, n, m;
+		var all = this.all;
+		var ps = this.ps;
+		var maxD = this.maxRadius*2;
+		var cop = this._ps();
+		for (var i = ps.length - 1; i >= 0; i--) {
+			var p1 = ps[i];
+			var fx = Math.floor((p1.p.x-minP.x+maxD/2)/maxD);
+			var fy = Math.floor((p1.p.y-minP.y+maxD/2)/maxD);
+			for(var y=fy;y<=fy+1;y++){
+			if(!all[y]) continue;
+			for(var x=fx;x<=fx+1;x++){
+			if(!all[y][x] || (y == fy && x == fx)) continue;
+				for (var j = all[y][x].length - 1; j >= 0; j--) {
+					obj = all[y][x][j];
+					p2 = obj.obj;
+					D = p1.r+p2.r;
+					d = Point.sub(p2.p,p1.p);
+					m = d.mag();
+					var weight = 1-m/D;
+					p1.weight+=weight;
+					p2.weight+=weight;
+				}
+			}}
+		}
+		for (var i = ps.length - 1; i >= 0; i--) {
+			var p1 = ps[i];
+			var fx = Math.floor((p1.p.x-minP.x+maxD/2)/maxD);
+			var fy = Math.floor((p1.p.y-minP.y+maxD/2)/maxD);
+			for(var y=fy;y<=fy+1;y++){
+			if(!all[y]) continue;
+			for(var x=fx;x<=fx+1;x++){
+			if(!all[y][x] || (y == fy && x == fx)) continue;
+				for (var j = all[y][x].length - 1; j >= 0; j--) {
+					obj = all[y][x][j];
+					p2 = obj.obj;
+					D = p1.r+p2.r;
+					d = Point.sub(p2.p,p1.p);
+					m = d.mag();
+					n = Point.normalize(d);
+				}
+			}}
+		}
 	},
 	update: function(){
+		for (var i = this.ps.length - 1; i >= 0; i--) {
+			this.ps[i].update();
+		}
 	},
 	draw: function(d){
 		for (var i = this.GroupLists.length - 1; i >= 0; i--) {
@@ -864,17 +972,20 @@ Object.assign(Physics.ParticleSystem.prototype, {
 	}
 });
 Physics.Obj = function(){
-	this.vertexs = [];
+	this.points = [];
+	this.mass = 1;
 };
 Object.assign(Physics.Obj.prototype, {
-	applyForce: function(){
+	addPoint: function(p){
+	},
+	applyForce: function(fv){
 	},
 	update: function(){
 	}
 });
 function SlideShow(space, tool){
 	if(arguments.length<2){
-		throw new Error('need 2 parameters for construting a SlideShow,  but '+arguments.length+' is present')
+		throw new Error('Need 2 parameters for construting a SlideShow,  but '+arguments.length+' is present')
 		;
 	}
 	this.slides = [];
