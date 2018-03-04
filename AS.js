@@ -68,7 +68,9 @@ Math.integral = function(f,a,b){
 	for(var i=a;i<b;i+=this.dx) sum+=this.dx*f(i);
 	return sum;
 };
-Math.mag = function(x,y){return this.sqrt(x*x+y*y);};
+Math.mag = function(x,y){
+	return this.pow(x*x+y*y,1/2);
+};
 Math.sum = function(a,b,e) {
 	var num = 0;
 	for(var i=a;i<b;i++){num+=eval(e);}
@@ -113,8 +115,13 @@ function randomFloat(a, b){
 	return a+Math.random()*(b-a);
 }
 function Point(x,y){
-	this.x = x || 0;
-	this.y = y || 0;
+	if(!y && x instanceof Point){
+		this.x = x.x;
+		this.y = x.y;
+	}else{
+		this.x = x || 0;
+		this.y = y || 0;
+	}
 	return this;
 }
 Object.assign(Point.prototype, {
@@ -201,8 +208,12 @@ Object.assign(Point.prototype, {
 	},
 	rotate: function(a){
 		var a0 = this.angle()+a;
-		this.x = Math.cos(a0)*this.mag();
-		this.y = Math.sin(a0)*this.mag();
+		var m = this.mag();
+		this.x = Math.cos(a0)*m;
+		this.y = Math.sin(a0)*m;
+		return this;
+	},
+	changeAxis: function(angle){
 		return this;
 	}
 });
@@ -306,7 +317,7 @@ Object.assign(Draw.prototype, {
 	},
 	stroke: function(r,g,b,a){
 		this._stroke = true;
-		if(!g){
+		if(typeof r == "string"){
 			this.strokeColor = r;
 			return;
 		}
@@ -314,7 +325,7 @@ Object.assign(Draw.prototype, {
 	},
 	fill: function(r,g,b,a){
 		this._fill = true;
-		if(!g){
+		if(typeof r == "string"){
 			this.fillColor = r;
 			return;
 		}
@@ -377,7 +388,7 @@ Object.assign(Draw.prototype, {
 		this.s0();
 		this.d.lineWidth = this.lineWidth;
 		this.d.strokeStyle = this.strokeColor;
-		if(arguments.length == 2 && x1 instanceof Point && x2 instanceof Point){
+		if(arguments.length == 2 && x1 instanceof Point && y1 instanceof Point){
 			d.moveTo(x1.x,x1.y);
 			d.lineTo(y1.x,y1.y);
 		}else{
@@ -537,8 +548,8 @@ Object.assign(Draw.prototype, {
 		this.d1 = false;
 	}
 });
-const Geometry = {};
-const Physics = {};
+var Geometry = {};
+var Physics = {};
 Object.assign(Geometry, {
 	pointsOnLine: function(x1,y1,x2,y2,s = 1){
 		var points = [];
@@ -609,7 +620,7 @@ Geometry.Graph = function(x,y,f){
 };
 Object.assign(Geometry.Graph.prototype, {
 	background: function(r,g,b,a){
-		if(!g){
+		if(typeof r == "string"){
 			this._background = r;
 			return;
 		}
@@ -832,8 +843,6 @@ Physics.Particle.prototype.copy = function(){
 Physics.ParticleGroup = function(){
 	this.forces = {
 		viscous: 0.2,
-		pressure: 0.3,
-		repulsion: 1.0,
 		elastic: 0,
 		tensile: 0,
 		powder: 0
@@ -852,7 +861,7 @@ Object.assign(Physics.ParticleGroup.prototype, {
 		p.group = this;
 	},
 	changeColor: function(r,g,b,a){
-		if(!g){
+		if(typeof r == "string"){
 			this.c = r;
 			return;
 		}
@@ -861,10 +870,16 @@ Object.assign(Physics.ParticleGroup.prototype, {
 	draw: function(d){
 		for (var i = this.ps.length - 1; i >= 0; i--) {
 			var p = this.ps[i];
+			p.r = this.rs;
 			d.translate(p.p);
+			d.noStroke();
+			d.fill(this.c);
 			d.ellipse(0,0,this.rs,this.rs);
 			d.translate(p.p.minus());
 		}
+	},
+	cal: function(weight){
+		return Math.max(0,weight-this.w1);
 	}
 });
 Physics.ParticleSystem = function(){
@@ -873,6 +888,10 @@ Physics.ParticleSystem = function(){
 	this.maxRadius = null;
 	this.all = [];
 	this.ps = [];
+	this.forces = {
+		pressure: 0.2,
+		repulsion: 1
+	}
 };
 Object.assign(Physics.ParticleSystem.prototype, {
 	split: function(){
@@ -935,9 +954,11 @@ Object.assign(Physics.ParticleSystem.prototype, {
 					D = p1.r+p2.r;
 					d = Point.sub(p2.p,p1.p);
 					m = d.mag();
-					var weight = 1-m/D;
-					p1.weight+=weight;
-					p2.weight+=weight;
+					if(m<D){
+						var weight = 1-m/D;
+						p1.weight+=weight;
+						p2.weight+=weight;
+					}
 				}
 			}}
 		}
@@ -969,23 +990,28 @@ Object.assign(Physics.ParticleSystem.prototype, {
 		for (var i = this.GroupLists.length - 1; i >= 0; i--) {
 			this.GroupLists[i].draw(d);
 		}
+	},
+	cal: function(weights){
+		return Math.max(0,this.forces.pressure*(weights-this.w0))
 	}
 });
 Physics.Obj = function(){
 	this.points = [];
 	this.mass = 1;
+	this.angle = 0;
 };
 Object.assign(Physics.Obj.prototype, {
 	addPoint: function(p){
 	},
 	applyForce: function(fv){
+		var F = fv.copy();
 	},
 	update: function(){
 	}
 });
 function SlideShow(space, tool){
 	if(arguments.length<2){
-		throw new Error('Need 2 parameters for construting a SlideShow,  but '+arguments.length+' is present')
+		throw new Error('Need 2 parameters for constructing a SlideShow,  but '+arguments.length+' is present')
 		;
 	}
 	this.slides = [];
