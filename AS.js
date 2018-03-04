@@ -1,3 +1,4 @@
+document.body.style.textAlign = "center";
 function createCanvas(id, w = window.innerWidth, h = window.innerHeight, sl){
 	if(!id){
 		throw new Error("Please enter an id in createCanvas()");
@@ -8,16 +9,26 @@ function createCanvas(id, w = window.innerWidth, h = window.innerHeight, sl){
 		h = window.innerHeight*arguments[1];
 	}
 	var ele = document.createElement("canvas");
-	ele.style = sl || "border: dashed 1px #000000;position: absolute;margin: 5%";
+	var t = window.innerHeight-h;
+	ele.style = sl || "border: dashed 1px #000000;margin-top: "+t/2+"px";
 	ele.width = w, ele.height = h;
 	ele.id = id;
 	document.body.appendChild(ele);
 }
-function poly(){
+function Poly(){
 	var a = arguments;
+	if(a.length%2 != 0){
+		var massage = "Invalid use of Poly()"+"\nEnter an even number of arguments, the function will return a new function. \n\tPoly(a,b,c,d) will return \n\nfunction(x){\n\treturn a*Math.pow(x,b)+c*Math.pow(x,d)\n}";
+		throw new Error(massage);
+	}
 	function f(x){
 		var value = 0;
-		for(var i=0;i<a.length;i++) value+=Math.pow(x,i)*a[i];
+		for(var i=0;i<a.length-1;i+=2){
+			value+=Math.pow(x,a[i+1])*a[i];
+		}
+		if(x == "info"){
+			return a;
+		}
 		return value;
 	}
 	return f;
@@ -78,9 +89,9 @@ Math.change = function(num,a,b){
 };
 function toHexColor(r,g,b,a = 255){
 	function t0(n){
-		var a = Math.change(n,10,16);
-		if(n<16) a = "0"+a;
-		return a;
+		var a0 = Math.change(n,10,16);
+		if(n<16) a0 = "0"+a0;
+		return a0;
 	}
 	return "#"+t0(r)+t0(g)+t0(b)+t0(a);
 }
@@ -93,6 +104,9 @@ function map(value, l1, h1, l2, h2) {
 	return l2+(h2-l2)*(value-l1)/(h1-l1);
 }
 function dist(x1,y1,x2,y2){
+	if(arguments.length == 2){
+		return Math.sqrt(Math.pow(y1.x-x1.x,2)+Math.pow(y1.y-x1.y,2));
+	}
 	return Math.sqrt(Math.pow(x2-x1,2)+Math.pow(y2-y1,2));
 }
 function randomFloat(a, b){
@@ -255,10 +269,10 @@ function Draw(space){
 }
 Object.assign(Draw.prototype, {
 	noStroke: function(){
-		this.stroke = false;
+		this._stroke = false;
 	},
 	noFill: function(){
-		this.fill = false;
+		this._fill = false;
 	},
 	strokeWeight: function(w){
 		this.lineWidth = w;
@@ -488,15 +502,12 @@ Object.assign(Draw.prototype, {
 			this.d0.lineTo(x,y);
 			this.last = new Point(x,y);
 		}else{
-			//this.d0.moveTo(x,y);
+			this.d0.moveTo(x,y);
 			this.d1 = true;
 			this.last = new Point(x,y);
-			this.start = new Point(x,y);
 		}
 	},
 	endShape: function(){
-		//this.d0.moveTo(this.last.x,this.last.y);
-		//this.d0.lineTo(this.start.x,this.start.y);
 		this.d0.lineWidth = this.lineWidth;
 		this.d0.strokeStyle = this.strokeColor;
 		this.d0.fillStyle = this.fillColor;
@@ -531,24 +542,33 @@ Object.assign(Geometry, {
 		}
 		return points;
 	},
-	Graph: function(){}
+	Graph: function(){},
+	Line: function(){}
 });
 Geometry.Graph = function(x,y,f){
-	this.origin = new Point(x,y);
-	this.isComplexPlane = true;
+	if(typeof x == "object"){
+		this.origin = x.copy();
+		this.f = y;
+	}else{
+		this.origin = new Point(x,y);
+		this.f = f;
+	}
+	this.isComplexPlane = false;
 	this.drawNumbers = true;
-	this.numberScale = 0.4;
+	this.numberScale = 1/40;
 	this.rotation = 0;
-	this.numbersColor = "#000000";
-	this.font = "italic";
+	this.numbersColor = "#007700";
+	this.font = "monospace";
 	this.drawGridLines = true;
 	this.gridLinesWeight = 1;
 	this.gridLinesColor = "#00000055";
 	this.graphLineColor = "#ff00ff";
+	this.normal = false;
+	this._background = null;
 	this.axisData = {
 		x: {
 			scale: 1,
-			color: "#000000",
+			color: "#ff0000",
 			draw: true,
 			spacing: 40,
 			start: -300,
@@ -557,7 +577,7 @@ Geometry.Graph = function(x,y,f){
 		},
 		y: {
 			scale: 1,
-			color: "#000000",
+			color: "#0000ff",
 			draw: true,
 			spacing: 40,
 			start: -300,
@@ -565,10 +585,16 @@ Geometry.Graph = function(x,y,f){
 			weight: 1
 		}
 	};
-	this.f = f;
-	this.dx = 1/100;
+	this.dx = 2.5;
 };
 Object.assign(Geometry.Graph.prototype, {
+	background: function(r,g,b,a){
+		if(!g){
+			this._background = r;
+			return;
+		}
+		this._background = toHexColor(r,g,b,a);
+	},
 	graph: function(d){
 		var ad = this.axisData;
 		d.translate(this.origin);
@@ -579,7 +605,9 @@ Object.assign(Geometry.Graph.prototype, {
 		d.stroke(this.graphLineColor);
 		for(var x=ad.x.start;x<ad.x.end;x+=this.dx){
 			var v = x*this.numberScale;
-			d.vertex(v/this.numberScale,this.f(v)/this.numberScale);
+			var y = this.f(v)/this.numberScale;
+			if(this.normal) y*=-1;
+			d.vertex(v/this.numberScale,y);
 		}
 		d.endShape();
 		d.scale(1/ad.x.scale,1/ad.y.scale);
@@ -587,10 +615,16 @@ Object.assign(Geometry.Graph.prototype, {
 		d.translate(this.origin.minus());
 	},
 	draw: function(d){
+		if(this.isComplexPlane) this.normal = true;
 		var ad = this.axisData;
 		d.translate(this.origin);
 		d.rotate(this.rotation);
 		d.scale(ad.x.scale,ad.y.scale);
+		if(this._background){
+			d.noStroke();
+			d.fill(this._background);
+			d.rect(ad.x.start,ad.y.start,ad.x.end-ad.x.start,ad.y.end-ad.y.start);
+		}
 		if(ad.x.draw){
 			d.strokeWeight(ad.x.weight);
 			d.stroke(ad.x.color);
@@ -609,22 +643,25 @@ Object.assign(Geometry.Graph.prototype, {
 			var c0 = 22, c1 = 1.75;
 			for(var i=0;i<ad.x.end;i+=ad.x.spacing){
 				var value = (i*this.numberScale).toFixed(2);
+				value*=1;
 				size = ad.x.spacing/(Math.pow(value.toString().length,1/2)*c1);
 				d.textSize(size);
-				var pos = new Point(i, 10);
+				var pos = new Point(i, 15);
 				if(i == 0) pos.x-=10;
 				d.text(value,pos);
 			}
 			for(var i=-ad.x.spacing;i>ad.x.start;i-=ad.x.spacing){
 				var value = (i*this.numberScale).toFixed(2);
+				value*=1;
 				size = ad.x.spacing/(Math.pow(value.toString().length,1/2)*c1);
 				d.textSize(size);
-				var pos = new Point(i, 10);
+				var pos = new Point(i, 15);
 				d.text(value,pos);
 			}
 			for(var i=ad.y.spacing;i<ad.y.end;i+=ad.y.spacing){
 				var pos = new Point(-15,i);
 				var value = (i*this.numberScale).toFixed(2);
+				if(this.normal) value*=-1;
 				size = ad.y.spacing/(Math.pow(value.toString().length,1/2)*c1);
 				if(this.isComplexPlane) value+="i";
 				d.textSize(size);
@@ -633,6 +670,7 @@ Object.assign(Geometry.Graph.prototype, {
 			for(var i=-ad.y.spacing;i>ad.y.start;i-=ad.y.spacing){
 				var pos = new Point(-15,i);
 				var value = (i*this.numberScale).toFixed(2);
+				if(this.normal) value*=-1;
 				size = ad.y.spacing/(Math.pow(value.toString().length,1/2)*c1);
 				if(this.isComplexPlane) value+="i";
 				d.textSize(size);
@@ -661,6 +699,58 @@ Object.assign(Geometry.Graph.prototype, {
 	},
 	int: function(a,b){
 		var start, finish;
+		var al = arguments.length;
+		if(al == 0){
+			start = this.axisData.x.start;
+			finish = this.axisData.y.finish;
+		}else if(al == 1){
+			start = -a;
+			finish = a;
+		}else if(al == 2){
+			start = a;
+			finish = b;
+		}
+		return Math.integral(this.f,start,finish);
+	},
+	average: function(a,b){
+		var start, finish;
+		var al = arguments.length;
+		if(al == 0){
+			start = this.axisData.x.start;
+			finish = this.axisData.y.finish;
+		}else if(al == 1){
+			start = -a;
+			finish = a;
+		}else if(al == 2){
+			start = a;
+			finish = b;
+		}
+		var sum = 0;
+		for(var i=start;i<finish;i+=Math.dx){
+			sum+=this.f(i);
+		}
+		return sum/((finish-start)/Math.dx);
+	}
+});
+Geometry.Line = function(){
+	var a = arguments;
+	if(a.length == 2){
+		this.p1 = a[0].copy();
+		this.p2 = a[1].copy();
+	}else if(a.length == 4){
+		this.p1 = new Point(a[0],a[1]);
+		this.p2 = new Point(a[2],a[3]);
+	}
+	if(a.length == 1 || a.length == 3 || a.length > 4){
+		throw new Error('Not understood for construction of Geometry.Line()');
+	}
+};
+Object.assign(Geometry.Line.prototype, {
+	angle: function(){
+		return Point.sub(this.p2,this.p1).angle();
+	},
+	length: function(){
+		return dist(this.p1,this.p2);
 	}
 });
 Object.assign(Physics, {
@@ -675,10 +765,24 @@ Physics.Particle = function(x,y){
 	this.age = 0;
 	this.lifeTime = 0;
 	this.fixed = false;
+	this.group = null;
+	this.r = null;
+};
+Physics.Particle.prototype.draw = function(){
+	throw new Error('use Physics.ParticleGroup.prototype.draw instead');
 };
 Physics.Particle.prototype.update = function(){
 	if(!this.fixed) this.p.add(this.v);
 	this.age++;
+};
+Physics.Particle.prototype.copy = function(){
+	var p = new this.constructor(this.p.x,this.p.y);
+	p.age = this.age;
+	p.fixed = this.fixed;
+	p.lifeTime = this.lifeTime;
+	p.v = this.v.copy();
+	p.group = this.group;
+	return p;
 };
 Physics.ParticleGroup = function(){
 	this.forces = {
@@ -689,42 +793,108 @@ Physics.ParticleGroup = function(){
 		tensile: 0,
 		powder: 0
 	};
+	this.system = null;
 	this.powderParticles = false;
 	this.w1 = 0.9;
 	this.ps = [];
+	this.rs = 2;
+	this.c = "#000000";
 };
 Object.assign(Physics.ParticleGroup.prototype, {
 	addParticle: function(p){
 		this.ps.push(p);
-	}
-});
-Object.assign(Physics.ParticleGroup, {
-	create: function(){
+		p.r = this.rs;
+		p.group = this;
+	},
+	changeColor: function(r,g,b,a){
+		if(!g){
+			this.c = r;
+			return;
+		}
+		this.c = toHexColor(r,g,b,a);
+	},
+	draw: function(d){
 	}
 });
 Physics.ParticleSystem = function(){
 	this.w0 = 0.7;
 	this.GroupLists = [];
+	this.maxRadius = null;
+	this.all = [];
+	this.ps = [];
 };
 Object.assign(Physics.ParticleSystem.prototype, {
-	getMaxRadius: function(){
+	split: function(){
+		var ps = this.ps;
+		for (var i = this.GroupLists.length - 1; i >= 0; i--) {
+			var g = this.GroupLists[i];
+			for (var j = g.ps.length - 1; j >= 0; j--) ps.push(g.ps[j]);
+		}
 	},
-	addGroup: function(){
+	_ps: function(){
+		var arr = [];
+		for (var i = this.ps.length - 1; i >= 0; i--) arr[i] = this.ps[i].copy();
+		return arr;
+	},
+	getMaxRadius: function(){
+		this.maxRadius = (this.GroupLists.sort(function(a,b){b.rs-a.rs})[0]).rs;
+	},
+	addGroup: function(g){
+		this.GroupLists.push(g);
+		this.split();
+		this.getMaxRadius();
+	},
+	sort: function(){
+		var ps = this.ps;
+		var maxD = this.maxRadius*2;
+		var minP = ps[0].p.copy();
+		for (var i = ps.length - 1; i >= 1; i--) {
+			if(ps[i].p.x<minP.x) minP.x = ps[i].p.x;
+			if(ps[i].p.y<minP.y) minP.y = ps[i].p.y;
+		}
 	},
 	solve: function(){
 	},
 	update: function(){
+	},
+	draw: function(d){
+		for (var i = this.GroupLists.length - 1; i >= 0; i--) {
+			this.GroupLists[i].draw(d);
+		}
 	}
 });
 Physics.Obj = function(){
 	this.vertexs = [];
 };
 Object.assign(Physics.Obj.prototype, {
+	applyForce: function(){
+	},
 	update: function(){
 	}
 });
-function SlideShow(){
+function SlideShow(space, tool){
+	if(arguments.length<2){
+		throw new Error('need 2 parameters for construting a SlideShow,  but '+arguments.length+' is present')
+		;
+	}
 	this.slides = [];
+	this.page = 0;
+	this.move = function(){
+		this.page++;
+	};
+	this.running = false;
+	this.finished = false;
+	this.tool = tool;
+	function f10(){};
+	space.addEventListener('mousedown', f10, false);
+	space.addEventListener('keydown', f10, false);
 }
 Object.assign(SlideShow.prototype, {
+	draw: function(index){
+		this.slides[index](this.tool);
+	},
+	run: function(){
+		this.running = true;
+		this.draw(this.page);
+	}
 });

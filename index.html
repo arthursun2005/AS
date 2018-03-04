@@ -7,11 +7,24 @@
 </body>
 <script src="AS.js"></script>
 <script type="text/javascript">
-	createCanvas("example",4/5);
-	var space = document.getElementById('example');
-	var center = new Point(space.width/2,space.height/2);
+	var id = "example", size = 4/5;
+	createCanvas(id,size);
+	var space = document.getElementById(id);
+	var ww = space.width, hh = space.height;
+	var center = new Point(ww/2,hh/2);
 	var tool = new Draw(space);
+	var ps = new Physics.ParticleSystem();
+	var pg = new Physics.ParticleGroup();
+	for(var i=0;i<100;i++){
+		pg.addParticle(new Physics.Particle(0,0));
+	}
+	ps.addGroup(pg);
+	console.log(ps);
 	function run(){
+		tool.noStroke();
+		tool.rectMode("anything");
+		tool.fill(245,245,245);
+		tool.rect(0,0,ww,hh);
 		setTimeout(run, 5);
 	}
 	run();
