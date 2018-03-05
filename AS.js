@@ -599,7 +599,8 @@ Object.assign(Geometry, {
 		return points;
 	},
 	Graph: function(){},
-	Line: function(){}
+	Line: function(){},
+	Shape: function(){}
 });
 Geometry.Graph = function(x,y,f){
 	if(typeof x == "object"){
@@ -819,17 +820,79 @@ Object.assign(Geometry.Line.prototype, {
 		p2.add(p1);
 	},
 	rotateAroundCenter: function(a){
-		p2.sub(this.center());
-		p1.sub(this.center());
-		p2.rotate(a);
-		p1.rotate(a);
-		p2.add(this.center());
-		p1.add(this.center());
+		var c = this.center();
+		p2.sub(c); p1.sub(c);
+		p2.rotate(a); p1.rotate(a);
+		p2.add(c); p1.add(c);
 	},
 	rotateAroundP2: function(a){
 		p1.sub(p2);
 		p1.rotate(a);
 		p1.add(p2);
+	}
+});
+Geometry.Shape = function(){
+	if(arguments.length>0){
+		if(arguments[0] instanceof Point){
+			for(var i=0;i<arguments.length;i++) this.points[i] = arguments[i].copy();
+		}else{
+			for(var i=0;i<arguments.length-1;i+=2) this.points.push(new Point(arguments[i],arguments[i+1]));
+		}
+	}else{
+		this.points = [];
+	}
+	this.lines = [];
+	this.join();
+};
+Object.assign(Geometry.Shape.prototype, {
+	addPoint: function(a,b){
+		if(!b && a instanceof Point) var p = a.copy();
+		else var p = new Point(a,b);
+		this.points.push(p);
+		this.join();
+	},
+	join: function(){
+		this.lines = [];
+		for(var i=0;i<this.points.length;i++){
+			var a = i == this.points.length-1 ? 0 : (i+1);
+			var p1 = this.points[i], p2 = this.points[a];
+			this.lines.push(new Line(p1,p2));
+		}
+	},
+	draw: function(d, c){
+		if(!d){
+			console.warn("No parameter for Geometry.Shape.prototype.draw");
+			return;
+		}
+		var _c = c || "#ff00ff";
+		for(var i=0;i<this.points.length;i++){
+			var a = i == this.points.length-1 ? 0 : (i+1);
+			var p1 = this.points[i], p2 = this.points[a];
+			d.strokeWeight(1);
+			d.stroke(_c);
+			d.line(p1,p2);
+		}
+	},
+	getLength: function(){
+		var sum = 0;
+		for(var i=0;i<this.points.length;i++){
+			var a = i == this.points.length-1 ? 0 : (i+1);
+			var p1 = this.points[i], p2 = this.points[a];
+			sum+=Point.sub(p2,p1).mag();
+		}
+		return sum;
+	},
+	rect: function(x,y,w,h){
+		this.points = [];
+		this.points[0] = new Point(x-w/2,y-h/2);
+		this.points[0] = new Point(x+w/2,y-h/2);
+		this.points[0] = new Point(x-w/2,y+h/2);
+		this.points[0] = new Point(x+w/2,y+h/2);
+		this.join();
+	},
+	circle: function(x,y,r,d){
+		this.points = Geometry.pointsOnCircle(x,y,r,d);
+		this.join();
 	}
 });
 Object.assign(Physics, {
@@ -965,6 +1028,7 @@ Object.assign(Physics.ParticleSystem.prototype, {
 		var ps = this.ps;
 		var maxD = this.maxRadius*2;
 		var cop = this._ps();
+		// suming up the weight
 		for (var i = ps.length - 1; i >= 0; i--) {
 			var p1 = ps[i];
 			var fx = Math.floor((p1.p.x-minP.x+maxD/2)/maxD);
@@ -987,6 +1051,10 @@ Object.assign(Physics.ParticleSystem.prototype, {
 				}
 			}}
 		}
+		/** 
+			* interations
+			* normal pressure for 2 particles of different group
+		**/
 		for (var i = ps.length - 1; i >= 0; i--) {
 			var p1 = ps[i];
 			var fx = Math.floor((p1.p.x-minP.x+maxD/2)/maxD);
@@ -1002,6 +1070,11 @@ Object.assign(Physics.ParticleSystem.prototype, {
 					d = Point.sub(p2.p,p1.p);
 					m = d.mag();
 					n = Point.normalize(d);
+					if(m<D){
+						if(p1.group != p2.group){
+						}else{
+						}
+					}
 				}
 			}}
 		}
@@ -1020,10 +1093,17 @@ Object.assign(Physics.ParticleSystem.prototype, {
 		return Math.max(0,this.forces.pressure*(weights-this.w0))
 	}
 });
-Physics.Obj = function(){
-	this.points = [];
+Physics.Obj = function(shape){
+	this.shape = shape || new Geometry.Shape();
+	this.p = new Point(x,y);
+	this.v = new Point();
 	this.mass = 1;
 	this.angle = 0;
+	this.spin = 0;
+	this.density = 1;
+	this.surfaceFriction = 1/2;
+	this.fixed = false;
+	this.color = "#008800";
 };
 Object.assign(Physics.Obj.prototype, {
 	addPoint: function(p){
@@ -1032,12 +1112,31 @@ Object.assign(Physics.Obj.prototype, {
 		var F = fv.copy();
 	},
 	update: function(){
+		this.p.add(this.v);
+	},
+	getCenter: function(){
+		var sum = new Point();
+		if(this.shape.points.length == 1){
+			return this.shape.points[0].copy();
+		}
+		for(var i=0;i<this.shape.points.length;i++){
+			var a = i+1;
+			if(i == this.shape.points.length-1) a = 0;
+			var s = Point.add(this.shape.points[a],this.shape.points[i]);
+			sum.add(Point.scale(s,1/2));
+		}
+		return Point.scale(sum,1/this.getMass());
+	},
+	getMass: function(density){
+		return density*this.shape.getLength();
+	},
+	draw: function(d){
+		this.shape.draw(d, this.color);
 	}
 });
 function SlideShow(space, tool){
 	if(arguments.length<2){
-		throw new Error('Need 2 parameters for constructing a SlideShow,  but '+arguments.length+' is present')
-		;
+		throw new Error('Need 2 parameters for constructing a SlideShow,  but '+arguments.length+' is present');
 	}
 	this.slides = [];
 	this.page = 0;
@@ -1047,7 +1146,8 @@ function SlideShow(space, tool){
 	this.running = false;
 	this.finished = false;
 	this.tool = tool;
-	function f10(){};
+	function f10(event){
+	};
 	space.addEventListener('mousedown', f10, false);
 	space.addEventListener('keydown', f10, false);
 }

@@ -21,38 +21,19 @@
 	ps.addGroup(pg);
 	console.log(ps);
 	var mouse = new Point(center);
-	var start = new Point(-100,0);
-	function f(e){var x = e.offsetX, y = e.offsetY;
-		mouse.set(x,y);}
+	function f(e){
+		var x = e.clientX-(window.innerWidth-ww)/2;
+		var y = e.clientY-(window.innerHeight-hh)/2;
+		mouse.set(x,y);
+	}
 	window.addEventListener('mousemove', f, false);
 	function run(){
+		//background
 		tool.noStroke();
 		tool.rectMode("anything");
 		tool.fill(245,245,245);
 		tool.rect(0,0,ww,hh);
-		tool.noFill();
-		tool.stroke(0,0,0);
-		tool.translate(center);
-		tool.ellipse(0,0,100,100);
-		tool.fill(0,255,0);
-		tool.ellipse(0,0,2,2);
-		tool.stroke(0,0,0);
-		var m = Point.sub(mouse,center);
-		tool.line(start,m);
-		tool.stroke(255,0,255);
-		var a = m.angle();
-		var a0 = start.angle();
-		var newLine = Point.sub(mouse,center);
-		newLine.sub(start);
-		newLine.changeAxis(a0);
-		tool.line(start,Point.add(Point.polar(newLine.x,a0),start));
-		tool.line(start,Point.add(Point.polar(newLine.y,a0-Math.PI/2),start));
 
-		tool.translate(center.minus());
-		start.rotate(0.005);
-		tool.noStroke();
-		tool.fill(255,0,0);
-		tool.ellipse(mouse.x,mouse.y,2,2);
 		setTimeout(run, 5);
 	}
 	run();
