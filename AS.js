@@ -151,7 +151,7 @@ Object.assign(Point.prototype, {
 	dot: function(v){
 		return this.x*v.x+this.y*v.y;
 	},
-	mult: function(v){
+	mul: function(v){
 		this.x = this.x*v.x-this.y*v.y,
 		this.y = this.x*v.y+this.y*v.x;
 		return this;
@@ -845,10 +845,23 @@ Geometry.Shape = function(){
 	this.join();
 };
 Object.assign(Geometry.Shape.prototype, {
-	addPoint: function(a,b){
-		if(!b && a instanceof Point) var p = a.copy();
-		else var p = new Point(a,b);
-		this.points.push(p);
+	_points: function(){
+		var ps = [];
+		for(var i=0;i<this.points.length;i++){
+			ps[i] = this.points[i].copy();
+		}
+		return ps;
+	},
+	addPoint: function(p, index){
+		index = constrain(index, 0, this.points.length);
+		var ps = this._points();
+		var _p = p.copy();
+		this.points[index] = _p;
+		if(index<this.points.length){
+			for(var i=index+1;i<this.points.length+1;i++){
+				this.points[i] = ps[i-1].copy();
+			}
+		}
 		this.join();
 	},
 	join: function(){
@@ -1106,13 +1119,15 @@ Physics.Obj = function(shape){
 	this.color = "#008800";
 };
 Object.assign(Physics.Obj.prototype, {
-	addPoint: function(p){
+	addPoint: function(p, index){
+		this.shape.addPoint(p, index);
 	},
 	applyForce: function(fv){
 		var F = fv.copy();
 	},
 	update: function(){
 		this.p.add(this.v);
+		this.angle+=this.spin;
 	},
 	getCenter: function(){
 		var sum = new Point();
