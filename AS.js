@@ -814,21 +814,32 @@ Object.assign(Geometry.Line.prototype, {
 		var p = Point.add(this.p1,this.p2);
 		return Point.scale(p,1/2);
 	},
-	rotateAroundP1: function(a){
-		p2.sub(p1);
-		p2.rotate(a);
-		p2.add(p1);
+	rotateAround: {
+		center: function(a){
+			var c = this.center();
+			p2.sub(c); p1.sub(c);
+			p2.rotate(a); p1.rotate(a);
+			p2.add(c); p1.add(c);
+		},
+		p1: function(a){
+			p2.sub(p1);
+			p2.rotate(a);
+			p2.add(p1);
+		},
+		p2: function(a){
+			p1.sub(p2);
+			p1.rotate(a);
+			p1.add(p2);
+		},
 	},
-	rotateAroundCenter: function(a){
-		var c = this.center();
-		p2.sub(c); p1.sub(c);
-		p2.rotate(a); p1.rotate(a);
-		p2.add(c); p1.add(c);
+	changedAxisOfPoint: function(p){
+		var _p = p.copy(), a = this.angle(), c = this.center();
+		_p.sub(c);
+		_p.changeAxis(a);
+		return new Point(Math.abs(_p.y), Math.abs(_p.x));
 	},
-	rotateAroundP2: function(a){
-		p1.sub(p2);
-		p1.rotate(a);
-		p1.add(p2);
+	closestPointAround: function(p){
+		return dist(p,this.p1)>dist(p,this.p2) ? p2.copy() : p1.copy();
 	}
 });
 Geometry.Shape = function(){
@@ -1161,6 +1172,16 @@ Object.assign(Physics.Obj.prototype, {
 	addPoint: function(p, index){
 		this.shape.addPoint(p, index);
 	},
+	realPoints: function(){
+		var ps = [];
+		for(var i=0;i<this.shape.points.length;i++){
+			ps[i] = new Point();
+			ps[i].rotate(this.angle);
+			ps[i].scale(this.scale);
+			ps[i].add(this.p);
+		}
+		return ps;
+	},
 	applyForce: function(p,fv){
 		var c = this.getCenter();
 		var m = this.getMass(this.density);
@@ -1201,7 +1222,6 @@ function SlideShow(space, tool){
 	this.running = false;
 	this.finished = false;
 	this.tool = tool;
-	//
 	var move = this.move, running = this.running;
 	function f10(event){
 	};
