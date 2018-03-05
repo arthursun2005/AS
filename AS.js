@@ -853,6 +853,8 @@ Object.assign(Geometry.Shape.prototype, {
 		return ps;
 	},
 	addPoint: function(p, index){
+		// inserting after
+		if(!index) index = this.closestPointAround(p).id;
 		index = constrain(index, 0, this.points.length);
 		var ps = this._points();
 		var _p = p.copy();
@@ -886,6 +888,15 @@ Object.assign(Geometry.Shape.prototype, {
 			d.line(p1,p2);
 		}
 	},
+	getCenter: function(){
+		var sum = new Point();
+		for(var i=0;i<this.points.length;i++){
+			var a = i == this.points.length-1 ? 0 : (i+1);
+			var p1 = this.points[i], p2 = this.points[a];
+			sum.add(Point.scale(Point.add(p1,p2),1/2));
+		}
+		return Point.scale(sum, 1/this.getLength());
+	},
 	getLength: function(){
 		var sum = 0;
 		for(var i=0;i<this.points.length;i++){
@@ -906,6 +917,15 @@ Object.assign(Geometry.Shape.prototype, {
 	circle: function(x,y,r,d){
 		this.points = Geometry.pointsOnCircle(x,y,r,d);
 		this.join();
+	},
+	closestPointAround: function(p){
+		var c = this.points[0].copy();
+		for(var i=1;i<this.points.length;i++){
+			if(Point.sub(c,p).mag()>Point.sub(this.points[i],p).mag()){
+				c = this.points[i].copy();
+			}
+		}
+		return {obj: c, id: i};
 	}
 });
 Object.assign(Physics, {
@@ -917,6 +937,7 @@ Object.assign(Physics, {
 Physics.Particle = function(x,y){
 	this.p = new Point(x,y);
 	this.v = new Point();
+	this.mass = 1;
 	this.age = 0;
 	this.lifeTime = 0;
 	this.fixed = false;
@@ -924,6 +945,9 @@ Physics.Particle = function(x,y){
 	this.r = null;
 	this.weight = 0;
 	this.pressure = 0;
+};
+Physics.Particle.prototype.applyForce = function(f){
+	this.v.add(Point.scale(f, 1/this.mass));
 };
 Physics.Particle.prototype.draw = function(){
 	throw new Error('Use Physics.ParticleGroup.prototype.draw or Physics.ParticleSystem.prototype.draw instead');
@@ -1064,8 +1088,14 @@ Object.assign(Physics.ParticleSystem.prototype, {
 				}
 			}}
 		}
+		for (var i = ps.length - 1; i >= 0; i--) {
+			// sumed weight into pressure
+			ps[i].pressure = this.cal(ps[i].weight);
+		}
+		// >_
 		/** 
-			* interations
+			* interations between particles
+			* method came form https://docs.google.com/presentation/d/1fEAb4-lSyqxlVGNPog3G1LZ7UgtvxfRAwR0dwd19G4g/edit#slide=id.g386b90fa9_028
 			* normal pressure for 2 particles of different group
 		**/
 		for (var i = ps.length - 1; i >= 0; i--) {
@@ -1085,6 +1115,7 @@ Object.assign(Physics.ParticleSystem.prototype, {
 					n = Point.normalize(d);
 					if(m<D){
 						if(p1.group != p2.group){
+							var repulsionForce = this.forces.repulsion*(p1.pressure+p2.pressure)*0.5;
 						}else{
 						}
 					}
@@ -1112,41 +1143,50 @@ Physics.Obj = function(shape){
 	this.v = new Point();
 	this.mass = 1;
 	this.angle = 0;
-	this.spin = 0;
+	this.scale = 1;
+	this.spin = 0; // angular velocity in radians per time unit
 	this.density = 1;
 	this.surfaceFriction = 1/2;
 	this.fixed = false;
-	this.color = "#008800";
+	this._color = "#008800";
 };
 Object.assign(Physics.Obj.prototype, {
+	color: function(r,g,b,a){
+		if(typeof r == "string"){
+			this._color = r;
+			return;
+		}
+		this._color = toHexColor(r,g,b,a);
+	},
 	addPoint: function(p, index){
 		this.shape.addPoint(p, index);
 	},
-	applyForce: function(fv){
+	applyForce: function(p,fv){
+		var c = this.getCenter();
+		var m = this.getMass(this.density);
 		var F = fv.copy();
+		var d = Point.sub(p,c);
+		var a = d.angle();
+		F.changeAxis(a);
 	},
 	update: function(){
 		this.p.add(this.v);
 		this.angle+=this.spin;
 	},
 	getCenter: function(){
-		var sum = new Point();
-		if(this.shape.points.length == 1){
-			return this.shape.points[0].copy();
-		}
-		for(var i=0;i<this.shape.points.length;i++){
-			var a = i+1;
-			if(i == this.shape.points.length-1) a = 0;
-			var s = Point.add(this.shape.points[a],this.shape.points[i]);
-			sum.add(Point.scale(s,1/2));
-		}
-		return Point.scale(sum,1/this.getMass());
+		return this.shape.getCenter();
 	},
 	getMass: function(density){
 		return density*this.shape.getLength();
 	},
 	draw: function(d){
-		this.shape.draw(d, this.color);
+		d.translate(this.p);
+		d.rotate(this.angle);
+		d.scale(this.scale);
+		this.shape.draw(d, this._color);
+		d.scale(1/this.scale);
+		d.rotate(-this.angle);
+		d.translate(this.p.minus());
 	}
 });
 function SlideShow(space, tool){
@@ -1161,6 +1201,8 @@ function SlideShow(space, tool){
 	this.running = false;
 	this.finished = false;
 	this.tool = tool;
+	//
+	var move = this.move, running = this.running;
 	function f10(event){
 	};
 	space.addEventListener('mousedown', f10, false);
