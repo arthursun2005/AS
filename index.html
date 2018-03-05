@@ -22,10 +22,9 @@
 	console.log(ps);
 	var mouse = new Point(center);
 	var start = new Point(-100,0);
-	window.addEventListener('mousemove', function(e){
-		var x = e.offsetX, y = e.offsetY;
-		mouse.set(x,y);
-	}, false);
+	function f(e){var x = e.offsetX, y = e.offsetY;
+		mouse.set(x,y);}
+	window.addEventListener('mousemove', f, false);
 	function run(){
 		tool.noStroke();
 		tool.rectMode("anything");
@@ -38,12 +37,22 @@
 		tool.fill(0,255,0);
 		tool.ellipse(0,0,2,2);
 		tool.stroke(0,0,0);
-		tool.line(start,Point.sub(mouse,center));
+		var m = Point.sub(mouse,center);
+		tool.line(start,m);
+		tool.stroke(255,0,255);
+		var a = m.angle();
+		var a0 = start.angle();
+		var newLine = Point.sub(mouse,center);
+		newLine.sub(start);
+		newLine.changeAxis(a0);
+		tool.line(start,Point.add(Point.polar(newLine.x,a0),start));
+		tool.line(start,Point.add(Point.polar(newLine.y,a0-Math.PI/2),start));
+
 		tool.translate(center.minus());
+		start.rotate(0.005);
 		tool.noStroke();
 		tool.fill(255,0,0);
 		tool.ellipse(mouse.x,mouse.y,2,2);
-		start.rotate(0.005);
 		setTimeout(run, 5);
 	}
 	run();

@@ -90,6 +90,10 @@ Math.change = function(num,a,b){
 	return n1.toString(b);
 };
 function toHexColor(r,g,b,a = 255){
+	r = constrain(r,0,255);
+	g = constrain(g,0,255);
+	b = constrain(b,0,255);
+	a = constrain(a,0,255);
 	function t0(n){
 		var a0 = Math.change(n,10,16);
 		if(n<16) a0 = "0"+a0;
@@ -213,9 +217,27 @@ Object.assign(Point.prototype, {
 		this.y = Math.sin(a0)*m;
 		return this;
 	},
+	rotateAround: function(x,y,a){
+		if(arguments.length == 2 && x instanceof Point){
+			var p = x.copy();
+			a = y;
+			this.sub(p);
+			this.rotate(a);
+			this.add(p);
+		}else{
+			var p = new Point(x,y);
+			this.sub(p);
+			this.rotate(a);
+			this.add(p);
+		}
+	},
 	changeAxis: function(angle){
+		var m = this.mag();
+		var a0 = angle-this.angle();
+		this.x = Math.cos(a0)*m;
+		this.y = Math.sin(a0)*m;
 		return this;
-	}
+	},
 });
 Object.assign(Point, {
 	add: function(){
@@ -270,6 +292,9 @@ Object.assign(Point, {
 	minus: function(a){
 		return new Point(-a.x,-a.y);
 	},
+	polar: function(r,a){
+		return new Point(Math.cos(a)*r,Math.sin(a)*r);
+	}
 });
 function Draw(space){
 	this.space = space;
