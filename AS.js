@@ -874,11 +874,21 @@ Object.assign(Geometry.Line.prototype, {
 			p1.add(p2);
 		},
 	},
-	changedAxisOfPoint: function(p){
+	_getDataOnPoint: function(p){
 		var _p = p.copy(), a = this.angle(), c = this.center();
 		_p.sub(c);
 		_p.changeAxis(a);
 		return new Point(Math.abs(_p.y), Math.abs(_p.x));
+	},
+	getDataOnPoint: function(p){
+		var data = {};
+		var l = this.length();
+		var _p = this._getDataOnPoint(p);
+		if(_p.y>l/2){
+			data.dist = Point.sub(this.closestPointAround(p), p).mag();
+		}else{
+			data.dist = _p.x;
+		}
 	},
 	closestPointAround: function(p){
 		return dist(p,this.p1)>dist(p,this.p2) ? p2.copy() : p1.copy();
@@ -962,6 +972,16 @@ Object.assign(Geometry.Shape.prototype, {
 		}
 		return sum;
 	},
+	getArea: function(){
+		var sum = 0, p0 = this.points[0];
+		for(var i=1;i<this.points.length-1;i++){
+			var p1 = this.points[i], p2 = this.points[i+1];
+			var a = dist(p1, p2), b = dist(p2,p0), c = dist(p0, p1);
+			var s = (a+b+c)/2;
+			sum+=Math.pow(s*(s-a)*(s-b)*(s-c), 1/2);
+		}
+		return sum;
+	},
 	rect: function(x,y,w,h){
 		this.points = Geometry.pointsOfRect(x,y,w,h);
 		this.join();
@@ -990,7 +1010,7 @@ Object.assign(Physics, {
 Physics.Particle = function(x,y){
 	this.p = new Point(x,y);
 	this.v = new Point();
-	this.mass = 1;
+	this.mass = 8;
 	this.timer = new Clock();
 	this.lifeTime = 0;
 	this.group = null;
@@ -1006,7 +1026,7 @@ Physics.Particle.prototype.applyForce = function(f){
 	this.v.add(Point.scale(f, 1/this.mass));
 };
 Physics.Particle.prototype.draw = function(){
-	throw new Error('Use Physics.ParticleGroup.prototype.draw or Physics.ParticleSystem.prototype.draw instead');
+	console.warn('Use Physics.ParticleGroup.prototype.draw or Physics.ParticleSystem.prototype.draw instead');
 };
 Physics.Particle.prototype.update = function(){
 	if(this.group.fixed) this.v = new Point();
@@ -1223,10 +1243,9 @@ Object.assign(Physics.ParticleSystem.prototype, {
 					if(m<2*D && (p1.group == p2.group) && p1.group.forces.elastic>0){
 						var g = p1.group || p2.group;
 						var copies = {
-							p1: g.data[p1.GroupListId], 
+							p1: g.data[p1.GroupListId],
 							p2: g.data[p2.GroupListId]
 						};
-						
 					}
 				}
 			}}
