@@ -1,3 +1,10 @@
+
+/*
+	Author: Arthur Sun
+	Use: ---
+	* * * * * *
+	- modules -
+*/
 document.body.style.textAlign = "center";
 document.body.style.fontFamily = "monospace";
 function createCanvas(id, w = window.innerWidth, h = window.innerHeight, sl){
@@ -143,16 +150,14 @@ function Clock(){
 Object.assign(Clock.prototype, {
 	set: function(start){
 		this.time+=(this.time-start);
+		this.start = start;
 	},
 	update: function(){
 		if(running) this.time+=this.lastRecordTime;
 		this.lastRecordTime = Date.now();
 	},
 	reset: function(){
-		this.time = 0;
-		this.running = true;
-		this.start = Date.now();
-		this.lastRecordTime = this.start;
+		this.set(Date.now());
 	}
 });
 function Point(x,y){
@@ -629,10 +634,10 @@ Object.assign(Geometry, {
 		for(var i=0;i<=m;i+=s) points.push(new Point(Math.cos(a)*i+p1.x,Math.sin(a)*i+p1.y));
 		return points;
 	},
-	pointsOnCircle: function(x,y,r,d = 1){
+	pointsOnCircle: function(x,y,r,_s = 0,_f = 2*Math.PI,d = 1){
 		var points = [];
 		var a = d/r;
-		for(var _a = 0; _a<2*Math.PI;_a+=a){
+		for(var _a = _s; _a<_f;_a+=a){
 			points.push(new Point(Math.cos(_a)*r+x,Math.sin(_a)*r+y));
 		}
 		return points;
@@ -874,21 +879,20 @@ Object.assign(Geometry.Line.prototype, {
 			p1.add(p2);
 		},
 	},
-	_getDataOnPoint: function(p){
-		var _p = p.copy(), a = this.angle(), c = this.center();
-		_p.sub(c);
-		_p.changeAxis(a);
-		return new Point(Math.abs(_p.y), Math.abs(_p.x));
-	},
 	getDataOnPoint: function(p){
 		var data = {};
 		var l = this.length();
-		var _p = this._getDataOnPoint(p);
+		var _p = p.copy(), a = this.angle(), c = this.center();
+		_p.sub(c);
+		_p.changeAxis(a);
 		if(_p.y>l/2){
-			data.dist = Point.sub(this.closestPointAround(p), p).mag();
+			var cp = this.closestPointAround(p)
+			data.dist = Point.sub(cp, p).mag();
+			data.p = cp.copy();
 		}else{
 			data.dist = _p.x;
 		}
+		return data;
 	},
 	closestPointAround: function(p){
 		return dist(p,this.p1)>dist(p,this.p2) ? p2.copy() : p1.copy();
@@ -934,7 +938,7 @@ Object.assign(Geometry.Shape.prototype, {
 		for(var i=0;i<this.points.length;i++){
 			var a = i == this.points.length-1 ? 0 : (i+1);
 			var p1 = this.points[i], p2 = this.points[a];
-			this.lines.push(new Line(p1,p2));
+			this.lines.push(new Geometry.Line(p1,p2));
 		}
 	},
 	draw: function(d, c){
@@ -986,9 +990,49 @@ Object.assign(Geometry.Shape.prototype, {
 		this.points = Geometry.pointsOfRect(x,y,w,h);
 		this.join();
 	},
-	circle: function(x,y,r,d){
-		this.points = Geometry.pointsOnCircle(x,y,r,d);
+	circle: function(x,y,r,a,b,d = 5){
+		this.points = Geometry.pointsOnCircle(x,y,r,a,b,d);
 		this.join();
+	},
+	line: function(x1,y1,x2,y2,r = 5){
+		this.points = [];
+		var m = dist(x1,y1,x2,y2), d = r/2, a = Point.sub(new Point(x2,y2),new Point(x1,y1)).angle();
+		var c1 = Geometry.pointsOnCircle(x1,y1,r,Math.PI/2,Math.PI/2+Math.PI,d);
+		var c2 = Geometry.pointsOnCircle(x1+m,y1,r,-Math.PI/2,Math.PI/2,d);
+		for(var i=0;i<c1.length;i++){
+			this.points.push(c1[i]);
+		}
+		this.points.push(new Point(x1+m,y1-r));
+		for(var i=0;i<c2.length;i++){
+			this.points.push(c2[i]);
+		}
+		this.points.push(new Point(x1,y1+r));
+		this.sub(x1,y1);
+		this.rotate(a);
+		this.add(x1,y1);
+		this.join();
+	},
+	sub: function(p){
+		if(arguments.length == 2) var p = new Point(arguments[0],arguments[1]);
+		for (var i = this.points.length - 1; i >= 0; i--) {
+			this.points[i].sub(p);
+		}
+	},
+	add: function(p){
+		if(arguments.length == 2) var p = new Point(arguments[0],arguments[1]);
+		for (var i = this.points.length - 1; i >= 0; i--) {
+			this.points[i].add(p);
+		}
+	},
+	rotate: function(a){
+		for (var i = this.points.length - 1; i >= 0; i--) {
+			this.points[i].rotate(a);
+		}
+	},
+	scale: function(s){
+		for (var i = this.points.length - 1; i >= 0; i--) {
+			this.points[i].scale(s);
+		}
 	},
 	closestPointAround: function(p){
 		var c = this.points[0].copy();
@@ -1016,7 +1060,9 @@ Physics.Particle = function(x,y){
 	this.group = null;
 	this.r = null;
 	this.c = "#009900";
+
 	this.weight = 0;
+	this.s = 0; // sums of normalized vectors
 	this.pressure = 0;
 };
 Physics.Particle.prototype.color = function(r,g,b,a){
@@ -1078,6 +1124,10 @@ Object.assign(Physics.ParticleGroup.prototype, {
 		p.r = this.rs;
 		p.group = this;
 		this.data.push(p.copy());
+		if(this.system){
+			this.system.split();
+			this.system.getMaxRadius();
+		}
 	},
 	draw: function(d){
 		for (var i = this.ps.length - 1; i >= 0; i--) {
@@ -1095,6 +1145,13 @@ Object.assign(Physics.ParticleGroup.prototype, {
 	},
 	calw0: function(weights){
 		return Math.max(0,this.forces.pressure*(weights-this.w0));
+	},
+	reset: function(){
+		for(var i=0;i<this.ps.length;i++){
+			this.ps[i].weight = 0;
+			this.ps[i].s = 0;
+			this.ps[i].pressure = 0;
+		}
 	}
 });
 Physics.ParticleSystem = function(){
@@ -1109,8 +1166,8 @@ Physics.ParticleSystem = function(){
 		tensileA: 0,
 		tensileB: 0,
 		powder: 0,
-		pressure: 0.2,
-		repulsion: 1
+		pressure: 0.25,
+		repulsion: 0.85
 	};
 };
 Object.assign(Physics.ParticleSystem.prototype, {
@@ -1118,7 +1175,7 @@ Object.assign(Physics.ParticleSystem.prototype, {
 		this.ps = [];
 		for (var i = this.GroupLists.length - 1; i >= 0; i--) {
 			var g = this.GroupLists[i];
-			for (var j = g.ps.length - 1; j >= 0; j--){
+			for (var j = 0; j<g.ps.length; j++){
 				g.ps[j].GroupListId = j;
 				this.ps.push(g.ps[j]);
 			}
@@ -1246,6 +1303,10 @@ Object.assign(Physics.ParticleSystem.prototype, {
 							p1: g.data[p1.GroupListId],
 							p2: g.data[p2.GroupListId]
 						};
+						var initDist = dist(copies.p1.p,copies.p2.p);
+						var power = p1.group.forces.elastic*(m-initDist);
+						cop[i].applyForce(Point.scale(n, power));
+						cop[obj.id].applyForce(Point.scale(n, -power));
 					}
 				}
 			}}
@@ -1279,6 +1340,7 @@ Physics.Obj = function(shape){
 	this.surfaceFriction = 1/2;
 	this.fixed = false;
 	this._color = "#008800";
+	this.timer = new Clock();
 };
 Object.assign(Physics.Obj.prototype, {
 	color: function(r,g,b,a){
@@ -1317,6 +1379,7 @@ Object.assign(Physics.Obj.prototype, {
 	update: function(){
 		this.p.add(this.v);
 		this.angle+=this.spin;
+		this.timer.update();
 	},
 	getCenter: function(){
 		return this.shape.getCenter();
@@ -1367,7 +1430,3 @@ Object.assign(SlideShow.prototype, {
 		this.draw(this.page);
 	}
 });
-var s = 0;
-for(var i=0;i<2e7;i++){
-	s+=Math.sqrt(i)*Math.pow(i,1/4.6);
-}

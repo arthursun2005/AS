@@ -29,6 +29,8 @@
 		mouse.set(x,y);
 	}
 	window.addEventListener('mousemove', f, false);
+	var s = new Geometry.Shape();
+	s.line(100,100,200,300);
 	function run(){
 		//background
 		tool.noStroke();
@@ -36,6 +38,7 @@
 		tool.fill(245,245,245);
 		tool.rect(0,0,ww,hh);
 		/****/
+		s.draw(tool);
 		setTimeout(run, 5);
 	}
 	run();
