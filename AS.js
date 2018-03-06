@@ -1,17 +1,14 @@
 
-/*
+/*****************************
 	Author: Arthur Sun
-	Use: ---
+	Use: -----
 	* * * * * *
 	- modules -
-*/
+/*****************************/
 document.body.style.textAlign = "center";
 document.body.style.fontFamily = "monospace";
 function createCanvas(id, w = window.innerWidth, h = window.innerHeight, sl){
-	if(!id){
-		throw new Error("Please enter an id in createCanvas()");
-		return;
-	}
+	if(!id) console.warn("Best to enter an id in createCanvas()");
 	if(arguments.length == 2){
 		w = window.innerWidth*arguments[1];
 		h = window.innerHeight*arguments[1];
@@ -48,28 +45,6 @@ function isArray(obj){
 		return false;
 	}
 }
-Math.Area = {
-	triangle: function(a,b,c){
-		var s = (a+b+c)/2;
-		return Math.sqrt(s*(s-a)*(s-b)*(s-c));
-	},
-	ellipse: function(a,b){
-		return a*b*Math.PI;
-	},
-	rect: function(w,h){
-		return w*h;
-	}
-};
-Math.Volume = {
-	cuboid: function(a,b,c){
-		return a*b*c;
-	},
-	sphere: function(){
-		if(a && b && c){return a*b*c*Math.PI*4/3;
-		}else if(a && b){return a*a*b*Math.PI*4/3;
-		}else{return a*a*a*Math.PI*4/3;}
-	}
-};
 Math.dx = 1e-6;
 Math.integral = function(f,a,b){
 	var sum = 0;
@@ -124,6 +99,8 @@ function toHexColor(r,g,b,a = 255){
 	}
 	return "#"+t0(r)+t0(g)+t0(b)+t0(a);
 }
+function toNum(){}
+function toColor(){}
 function constrain(value, min, max){
 	if(value<=min) return min;
 	if(value>=max) return max;
@@ -1162,10 +1139,6 @@ Physics.ParticleSystem = function(){
 	this.ps = [];
 	this.forces = {
 		viscous: 0.2,
-		elastic: 0,
-		tensileA: 0,
-		tensileB: 0,
-		powder: 0,
 		pressure: 0.25,
 		repulsion: 0.85
 	};
