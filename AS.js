@@ -1,4 +1,5 @@
 document.body.style.textAlign = "center";
+document.body.style.fontFamily = "monospace";
 function createCanvas(id, w = window.innerWidth, h = window.innerHeight, sl){
 	if(!id){
 		throw new Error("Please enter an id in createCanvas()");
@@ -90,6 +91,21 @@ Math.change = function(num,a,b){
 	return n1.toString(b);
 };
 function toHexColor(r,g,b,a = 255){
+	var _a = arguments;
+	if(_a.length == 1){
+		if(typeof _a[0] == 'string'){
+			return r;
+		}else if(typeof _a[0] == 'number'){
+			g = r;
+			b = r;
+			a = 255;
+		}
+	}else if(_a.length == 2 && typeof _a[0] == 'number'&& typeof _a[1] == 'number'){
+		var _g = g;
+		g = r;
+		b = r;
+		a = _g;
+	}
 	r = constrain(r,0,255);
 	g = constrain(g,0,255);
 	b = constrain(b,0,255);
@@ -125,9 +141,12 @@ function Clock(){
 	this.lastRecordTime = this.start;
 }
 Object.assign(Clock.prototype, {
+	set: function(start){
+		this.time+=(this.time-start);
+	},
 	update: function(){
-		this.lastRecordTime = Date.now();
 		if(running) this.time+=this.lastRecordTime;
+		this.lastRecordTime = Date.now();
 	},
 	reset: function(){
 		this.time = 0;
@@ -174,9 +193,14 @@ Object.assign(Point.prototype, {
 	dot: function(v){
 		return this.x*v.x+this.y*v.y;
 	},
-	mul: function(v){
-		this.x = this.x*v.x-this.y*v.y,
-		this.y = this.x*v.y+this.y*v.x;
+	mul: function(v, c){
+		if(c){
+			this.x = this.x*v.x-this.y*v.y,
+			this.y = this.x*v.y+this.y*v.x;
+		}else{
+			this.x = this.x*v.x+this.y*v.y,
+			this.y = this.x*v.y+this.y*v.x;
+		}
 		return this;
 	},
 	add: function(v){
@@ -364,18 +388,10 @@ Object.assign(Draw.prototype, {
 	},
 	stroke: function(r,g,b,a){
 		this._stroke = true;
-		if(typeof r == "string"){
-			this.strokeColor = r;
-			return;
-		}
 		this.strokeColor = toHexColor(r,g,b,a);
 	},
 	fill: function(r,g,b,a){
 		this._fill = true;
-		if(typeof r == "string"){
-			this.fillColor = r;
-			return;
-		}
 		this.fillColor = toHexColor(r,g,b,a);
 	},
 	translate: function(x,y){
@@ -676,10 +692,6 @@ Geometry.Graph = function(x,y,f){
 };
 Object.assign(Geometry.Graph.prototype, {
 	background: function(r,g,b,a){
-		if(typeof r == "string"){
-			this._background = r;
-			return;
-		}
 		this._background = toHexColor(r,g,b,a);
 	},
 	graph: function(d){
@@ -930,6 +942,9 @@ Object.assign(Geometry.Shape.prototype, {
 		}
 	},
 	getCenter: function(){
+		if(this.points.length == 0){
+			console.warn("(There is no points) Geometry.Shape.getCenter(): The center will be Infinity if there is no points");
+		}
 		var sum = new Point();
 		for(var i=0;i<this.points.length;i++){
 			var a = i == this.points.length-1 ? 0 : (i+1);
@@ -976,9 +991,8 @@ Physics.Particle = function(x,y){
 	this.p = new Point(x,y);
 	this.v = new Point();
 	this.mass = 1;
-	this.age = 0;
+	this.timer = new Clock();
 	this.lifeTime = 0;
-	this.fixed = false;
 	this.group = null;
 	this.r = null;
 	this.c = "#009900";
@@ -986,10 +1000,6 @@ Physics.Particle = function(x,y){
 	this.pressure = 0;
 };
 Physics.Particle.prototype.color = function(r,g,b,a){
-	if(typeof r == "string"){
-		this.c = r;
-		return;
-	}
 	this.c = toHexColor(r,g,b,a);
 };
 Physics.Particle.prototype.applyForce = function(f){
@@ -999,8 +1009,9 @@ Physics.Particle.prototype.draw = function(){
 	throw new Error('Use Physics.ParticleGroup.prototype.draw or Physics.ParticleSystem.prototype.draw instead');
 };
 Physics.Particle.prototype.update = function(){
-	if(!this.fixed) this.p.add(this.v);
-	this.age++;
+	if(this.group.fixed) this.v = new Point();
+	this.p.add(this.v);
+	this.timer.update()
 };
 Physics.Particle.prototype.copy = function(){
 	var p = new this.constructor(this.p.x,this.p.y);
@@ -1018,9 +1029,12 @@ Physics.ParticleGroup = function(){
 		viscous: 0.2,
 		// if the numbers are 0, this group of particles isn't that type
 		elastic: 0,
-		tensile: 0,
+		tensileA: 0,
+		tensileB: 0,
 		powder: 0
 	};
+	this.data = [];
+	this.fixed = false;
 	this.system = null;
 	this.mixColor = false;
 	this.w1 = 0.9;
@@ -1029,10 +1043,21 @@ Physics.ParticleGroup = function(){
 	this.rs = 2;
 };
 Object.assign(Physics.ParticleGroup.prototype, {
+	update: function(){
+		for (var i = this.ps.length - 1; i >= 0; i--) {
+			var p = this.ps[i];
+			p.update();
+			p.r = this.rs;
+			if(p.lifeTime != 0 && p.timer.time>p.lifeTime){
+				this.ps.splice(i,1);
+			}
+		}
+	},
 	addParticle: function(p){
 		this.ps.push(p);
 		p.r = this.rs;
 		p.group = this;
+		this.data.push(p.copy());
 	},
 	draw: function(d){
 		for (var i = this.ps.length - 1; i >= 0; i--) {
@@ -1061,7 +1086,8 @@ Physics.ParticleSystem = function(){
 	this.forces = {
 		viscous: 0.2,
 		elastic: 0,
-		tensile: 0,
+		tensileA: 0,
+		tensileB: 0,
 		powder: 0,
 		pressure: 0.2,
 		repulsion: 1
@@ -1073,6 +1099,7 @@ Object.assign(Physics.ParticleSystem.prototype, {
 		for (var i = this.GroupLists.length - 1; i >= 0; i--) {
 			var g = this.GroupLists[i];
 			for (var j = g.ps.length - 1; j >= 0; j--){
+				g.ps[j].GroupListId = j;
 				this.ps.push(g.ps[j]);
 			}
 		}
@@ -1118,8 +1145,8 @@ Object.assign(Physics.ParticleSystem.prototype, {
 		// suming up the weight
 		for (var i = ps.length - 1; i >= 0; i--) {
 			var p1 = ps[i];
-			var fx = Math.floor((p1.p.x-minP.x+maxD/2)/maxD);
-			var fy = Math.floor((p1.p.y-minP.y+maxD/2)/maxD);
+			var fx = Math.floor((p1.p.x-minP.x-maxD/2)/maxD);
+			var fy = Math.floor((p1.p.y-minP.y-maxD/2)/maxD);
 			for(var y=fy;y<=fy+1;y++){
 			if(!all[y]) continue;
 			for(var x=fx;x<=fx+1;x++){
@@ -1150,8 +1177,8 @@ Object.assign(Physics.ParticleSystem.prototype, {
 		**/
 		for (var i = ps.length - 1; i >= 0; i--) {
 			var p1 = ps[i];
-			var fx = Math.floor((p1.p.x-minP.x+maxD/2)/maxD);
-			var fy = Math.floor((p1.p.y-minP.y+maxD/2)/maxD);
+			var fx = Math.floor((p1.p.x-minP.x-maxD/2)/maxD);
+			var fy = Math.floor((p1.p.y-minP.y-maxD/2)/maxD);
 			for(var y=fy;y<=fy+1;y++){
 			if(!all[y]) continue;
 			for(var x=fx;x<=fx+1;x++){
@@ -1193,6 +1220,14 @@ Object.assign(Physics.ParticleSystem.prototype, {
 							cop[obj.id].applyForce(Point.scale(n, repulsionForce));
 						}
 					}
+					if(m<2*D && (p1.group == p2.group) && p1.group.forces.elastic>0){
+						var g = p1.group || p2.group;
+						var copies = {
+							p1: g.data[p1.GroupListId], 
+							p2: g.data[p2.GroupListId]
+						};
+						
+					}
 				}
 			}}
 		}
@@ -1201,8 +1236,8 @@ Object.assign(Physics.ParticleSystem.prototype, {
 		}
 	},
 	update: function(){
-		for (var i = this.ps.length - 1; i >= 0; i--) {
-			this.ps[i].update();
+		for (var i = this.GroupLists.length - 1; i >= 0; i--) {
+			this.GroupLists[i].update();
 		}
 	},
 	draw: function(d){
@@ -1228,10 +1263,6 @@ Physics.Obj = function(shape){
 };
 Object.assign(Physics.Obj.prototype, {
 	color: function(r,g,b,a){
-		if(typeof r == "string"){
-			this._color = r;
-			return;
-		}
 		this._color = toHexColor(r,g,b,a);
 	},
 	addPoint: function(p, index){
@@ -1249,6 +1280,10 @@ Object.assign(Physics.Obj.prototype, {
 		return newShape;
 	},
 	applyForce: function(p,fv){
+		if(this.shape.points.length == 0){
+			console.warn("Cannot applyForce: no points in shape, add a point to shape");
+			return;
+		}
 		var c = this.getCenter();
 		var m = this.getMass(this.density);
 		var F = fv.copy();
@@ -1280,6 +1315,12 @@ Object.assign(Physics.Obj.prototype, {
 		d.translate(this.p.minus());
 	}
 });
+Physics.Rope = function(){
+	this.objs = [];
+};
+Object.assign(Physics.Rope.prototype, {
+	set: function(){}
+});
 function SlideShow(space, tool){
 	if(arguments.length<2){
 		throw new Error('Need 2 parameters for constructing a SlideShow,  but '+arguments.length+' is present');
@@ -1307,3 +1348,7 @@ Object.assign(SlideShow.prototype, {
 		this.draw(this.page);
 	}
 });
+var s = 0;
+for(var i=0;i<2e7;i++){
+	s+=Math.sqrt(i)*Math.pow(i,1/4.6);
+}
