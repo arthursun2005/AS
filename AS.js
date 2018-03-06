@@ -118,6 +118,24 @@ function dist(x1,y1,x2,y2){
 function randomFloat(a, b){
 	return a+Math.random()*(b-a);
 }
+function Clock(){
+	this.time = 0;
+	this.running = true;
+	this.start = Date.now();
+	this.lastRecordTime = this.start;
+}
+Object.assign(Clock.prototype, {
+	update: function(){
+		this.lastRecordTime = Date.now();
+		if(running) this.time+=this.lastRecordTime;
+	},
+	reset: function(){
+		this.time = 0;
+		this.running = true;
+		this.start = Date.now();
+		this.lastRecordTime = this.start;
+	}
+});
 function Point(x,y){
 	if(!y && x instanceof Point){
 		this.x = x.x;
@@ -130,8 +148,13 @@ function Point(x,y){
 }
 Object.assign(Point.prototype, {
 	set: function(x,y){
-		this.x = x || 0;
-		this.y = y || 0;
+		if(!y && x instanceof Point){
+			this.x = x.x;
+			this.y = x.y;
+		}else{
+			this.x = x || 0;
+			this.y = y || 0;
+		}
 		return this;
 	},
 	copy: function(){
@@ -234,8 +257,7 @@ Object.assign(Point.prototype, {
 	changeAxis: function(angle){
 		var m = this.mag();
 		var a0 = angle-this.angle();
-		this.x = Math.cos(a0)*m;
-		this.y = Math.sin(a0)*m;
+		this.set(Point.polar(m, a0));
 		return this;
 	},
 });
@@ -576,6 +598,14 @@ Object.assign(Draw.prototype, {
 var Geometry = {};
 var Physics = {};
 Object.assign(Geometry, {
+	pointsOfRect: function(x,y,w,h){
+		var points = [];
+		points[0] = new Point(x-w/2,y-h/2);
+		points[1] = new Point(x+w/2,y-h/2);
+		points[2] = new Point(x-w/2,y+h/2);
+		points[3] = new Point(x+w/2,y+h/2);
+		return points;
+	},
 	pointsOnLine: function(x1,y1,x2,y2,s = 1){
 		var points = [];
 		var p1 = new Point(x1,y1), p2 = new Point(x2,y2);
@@ -918,11 +948,7 @@ Object.assign(Geometry.Shape.prototype, {
 		return sum;
 	},
 	rect: function(x,y,w,h){
-		this.points = [];
-		this.points[0] = new Point(x-w/2,y-h/2);
-		this.points[0] = new Point(x+w/2,y-h/2);
-		this.points[0] = new Point(x-w/2,y+h/2);
-		this.points[0] = new Point(x+w/2,y+h/2);
+		this.points = Geometry.pointsOfRect(x,y,w,h);
 		this.join();
 	},
 	circle: function(x,y,r,d){
@@ -943,7 +969,8 @@ Object.assign(Physics, {
 	Particle: function(){},
 	ParticleGroup: function(){},
 	ParticleSystem: function(){},
-	Obj: function(){}
+	Obj: function(){},
+	Rope: function(){}
 });
 Physics.Particle = function(x,y){
 	this.p = new Point(x,y);
@@ -954,8 +981,16 @@ Physics.Particle = function(x,y){
 	this.fixed = false;
 	this.group = null;
 	this.r = null;
+	this.c = "#009900";
 	this.weight = 0;
 	this.pressure = 0;
+};
+Physics.Particle.prototype.color = function(r,g,b,a){
+	if(typeof r == "string"){
+		this.c = r;
+		return;
+	}
+	this.c = toHexColor(r,g,b,a);
 };
 Physics.Particle.prototype.applyForce = function(f){
 	this.v.add(Point.scale(f, 1/this.mass));
@@ -978,17 +1013,20 @@ Physics.Particle.prototype.copy = function(){
 };
 Physics.ParticleGroup = function(){
 	this.forces = {
+		pressure: 0.2,
+		repulsion: 1,
 		viscous: 0.2,
+		// if the numbers are 0, this group of particles isn't that type
 		elastic: 0,
 		tensile: 0,
 		powder: 0
 	};
 	this.system = null;
-	this.powderParticles = false;
+	this.mixColor = false;
 	this.w1 = 0.9;
+	this.w0 = 0.7;
 	this.ps = [];
 	this.rs = 2;
-	this.c = "#ffffff84";
 };
 Object.assign(Physics.ParticleGroup.prototype, {
 	addParticle: function(p){
@@ -996,26 +1034,22 @@ Object.assign(Physics.ParticleGroup.prototype, {
 		p.r = this.rs;
 		p.group = this;
 	},
-	changeColor: function(r,g,b,a){
-		if(typeof r == "string"){
-			this.c = r;
-			return;
-		}
-		this.c = toHexColor(r,g,b,a);
-	},
 	draw: function(d){
 		for (var i = this.ps.length - 1; i >= 0; i--) {
 			var p = this.ps[i];
 			p.r = this.rs;
 			d.translate(p.p);
 			d.noStroke();
-			d.fill(this.c);
+			d.fill(p.c);
 			d.ellipse(0,0,this.rs,this.rs);
 			d.translate(p.p.minus());
 		}
 	},
-	cal: function(weight){
+	calw1: function(weight){
 		return Math.max(0,weight-this.w1);
+	},
+	calw0: function(weights){
+		return Math.max(0,this.forces.pressure*(weights-this.w0));
 	}
 });
 Physics.ParticleSystem = function(){
@@ -1025,9 +1059,13 @@ Physics.ParticleSystem = function(){
 	this.all = [];
 	this.ps = [];
 	this.forces = {
+		viscous: 0.2,
+		elastic: 0,
+		tensile: 0,
+		powder: 0,
 		pressure: 0.2,
 		repulsion: 1
-	}
+	};
 };
 Object.assign(Physics.ParticleSystem.prototype, {
 	split: function(){
@@ -1048,6 +1086,7 @@ Object.assign(Physics.ParticleSystem.prototype, {
 		this.maxRadius = (this.GroupLists.sort(function(a,b){b.rs-a.rs})[0]).rs;
 	},
 	addGroup: function(g){
+		g.system = this;
 		this.GroupLists.push(g);
 		this.split();
 		this.getMaxRadius();
@@ -1103,10 +1142,10 @@ Object.assign(Physics.ParticleSystem.prototype, {
 			// sumed weight into pressure
 			ps[i].pressure = this.cal(ps[i].weight);
 		}
-		// >_
-		/** 
+		/**
 			* interations between particles
-			* method came form https://docs.google.com/presentation/d/1fEAb4-lSyqxlVGNPog3G1LZ7UgtvxfRAwR0dwd19G4g/edit#slide=id.g386b90fa9_028
+			* methods came from: 
+			* https://docs.google.com/presentation/d/1fEAb4-lSyqxlVGNPog3G1LZ7UgtvxfRAwR0dwd19G4g/edit#slide=id.g386b90fa9_028
 			* normal pressure for 2 particles of different group
 		**/
 		for (var i = ps.length - 1; i >= 0; i--) {
@@ -1123,15 +1162,42 @@ Object.assign(Physics.ParticleSystem.prototype, {
 					D = p1.r+p2.r;
 					d = Point.sub(p2.p,p1.p);
 					m = d.mag();
-					n = Point.normalize(d);
 					if(m<D){
+						var w = 1-m/D;
+						n = Point.normalize(d);
+						var velocityDif = Point.sub(p2.v, p1.v);
 						if(p1.group != p2.group){
 							var repulsionForce = this.forces.repulsion*(p1.pressure+p2.pressure)*0.5;
+							var viscousForce = this.forces.viscous;
+							cop[i].applyForce(Point.scale(n, -repulsionForce));
+							cop[obj.id].applyForce(Point.scale(n, repulsionForce));
+							cop[i].applyForce(Point.scale(n, viscousForce));
+							cop[obj.id].applyForce(Point.scale(n, -viscousForce));
+							if(p1.group.mixColor && p2.group.mixColor){}
 						}else{
+							var pre = {
+								p1: g.calw0(p1.weight),
+								p2: g.calw0(p2.weight)
+							};
+							var g = p1.group || p2.group;
+							// viscous
+							var viscousForce = g.forces.viscous;
+							cop[i].applyForce(Point.scale(n, viscousForce));
+							cop[obj.id].applyForce(Point.scale(n, -viscousForce));
+							if(g.forces.powder == 0){
+								var repulsionForce = g.forces.repulsion*(pre.p1+pre.p2)*0.5;
+							}else{
+								var repulsionForce = g.forces.powder*g.calw1(w);
+							}
+							cop[i].applyForce(Point.scale(n, -repulsionForce));
+							cop[obj.id].applyForce(Point.scale(n, repulsionForce));
 						}
 					}
 				}
 			}}
+		}
+		for (var i = cop.length - 1; i >= 0; i--) {
+			this.ps[i] = cop[i].copy();
 		}
 	},
 	update: function(){
@@ -1145,14 +1211,13 @@ Object.assign(Physics.ParticleSystem.prototype, {
 		}
 	},
 	cal: function(weights){
-		return Math.max(0,this.forces.pressure*(weights-this.w0))
+		return Math.max(0,this.forces.pressure*(weights-this.w0));
 	}
 });
 Physics.Obj = function(shape){
 	this.shape = shape || new Geometry.Shape();
 	this.p = new Point(x,y);
 	this.v = new Point();
-	this.mass = 1;
 	this.angle = 0;
 	this.scale = 1;
 	this.spin = 0; // angular velocity in radians per time unit
@@ -1172,7 +1237,7 @@ Object.assign(Physics.Obj.prototype, {
 	addPoint: function(p, index){
 		this.shape.addPoint(p, index);
 	},
-	realPoints: function(){
+	getRealShape: function(){
 		var ps = [];
 		for(var i=0;i<this.shape.points.length;i++){
 			ps[i] = new Point();
@@ -1180,15 +1245,20 @@ Object.assign(Physics.Obj.prototype, {
 			ps[i].scale(this.scale);
 			ps[i].add(this.p);
 		}
-		return ps;
+		var newShape = new Geometry.Shape(ps);
+		return newShape;
 	},
 	applyForce: function(p,fv){
 		var c = this.getCenter();
 		var m = this.getMass(this.density);
 		var F = fv.copy();
 		var d = Point.sub(p,c);
+		var r = d.mag();
 		var a = d.angle();
 		F.changeAxis(a);
+		this.v.add(Point.scale(Point.polar(F.x, a), 1/m));
+		var tl = F.y;
+		//this.v.add(Point.scale(Point.polar(F.y, a-Math.PI/2), 1/m*l1));
 	},
 	update: function(){
 		this.p.add(this.v);

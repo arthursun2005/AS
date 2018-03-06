@@ -1,7 +1,3 @@
-# AS
-Making a game library
-
-
 #TODO:
   * particle simulationm
   * slideshow
