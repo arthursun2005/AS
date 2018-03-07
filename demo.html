@@ -5,6 +5,7 @@
 	<meta charset="utf-8">
 	<meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
 </head>
+<h1>- Demo -</h1>
 <body>
 </body>
 <script src="AS.js"></script>
@@ -21,14 +22,17 @@
 		pg.addParticle(new Physics.Particle(0,0));
 	}
 	ps.addGroup(pg);
+	for(var i=0;i<100;i++){
+		pg.addParticle(new Physics.Particle(0,0));
+	}
 	console.log(ps);
 	var mouse = new Point(center);
 	function f(e){
-		var x = e.clientX-(window.innerWidth-ww)/2;
-		var y = e.clientY-(window.innerHeight-hh)/2-10;
+		var x = e.offsetX;
+		var y = e.offsetY;
 		mouse.set(x,y);
 	}
-	window.addEventListener('mousemove', f, false);
+	space.addEventListener('mousemove', f, false);
 	var s = new Geometry.Shape();
 	s.line(300,300,800,300,15);
 	s.addPoint(500,200);

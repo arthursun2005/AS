@@ -1370,6 +1370,21 @@ Object.assign(Physics.ParticleSystem.prototype, {
 	},
 	cal: function(weights){
 		return Math.max(0,this.forces.pressure*(weights-this.w0));
+	},
+	interactWithLine: function(line){
+		var p;
+		for(var i=0;i<this.ps.length;i++){
+			p = this.ps[i];
+			var data = line.getDataOnPoint(p.p);
+			if(data.dist<p.r){
+				var a = Point.sub(data.p, p.p).angle(), l = 1-data.dist/p.r;
+				if(p.group.powder){
+					p.applyForce(Point.scale(p.group.calw1(l)*p.group.forces.repulsion));
+				}else{
+					p.applyForce(Point.scale(p.group.calw0(l)*p.pressure*p.group.forces.repulsion));
+				}
+			}
+		}
 	}
 });
 Physics.Obj = function(shape){
