@@ -16,16 +16,6 @@
 	var ww = space.width, hh = space.height;
 	var center = new Point(ww/2,hh/2);
 	var tool = new Draw(space);
-	var ps = new Physics.ParticleSystem();
-	var pg = new Physics.ParticleGroup();
-	for(var i=0;i<100;i++){
-		pg.addParticle(new Physics.Particle(0,0));
-	}
-	ps.addGroup(pg);
-	for(var i=0;i<100;i++){
-		pg.addParticle(new Physics.Particle(0,0));
-	}
-	console.log(ps);
 	var mouse = new Point(center);
 	function f(e){
 		var x = e.offsetX;
@@ -33,28 +23,13 @@
 		mouse.set(x,y);
 	}
 	space.addEventListener('mousemove', f, false);
-	var s = new Geometry.Shape();
-	s.line(300,300,800,300,15);
-	s.addPoint(500,200);
-	var o = new Physics.Obj(s);
-	space.style.cursor = 'crosshair';
-	console.log(o.getRealShape());
 	function run(){
 		//background
 		tool.noStroke();
-		tool.rectMode("anything");
+		tool.rectMode("corner");
 		tool.fill(240,250,250);
 		tool.rect(0,0,ww,hh);
 		/****/
-		o.draw(tool);
-		o.update(tool);
-		tool.fill(0,0,0);
-		if(o.getRealShape().inShape(mouse)){
-			var hit = true;
-		}else{
-			var hit = false;
-		}
-		tool.text(hit,100,100);
 		setTimeout(run, 5);
 	}
 	run();

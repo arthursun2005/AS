@@ -17,6 +17,7 @@ function createCanvas(id, w = window.innerWidth, h = window.innerHeight, sl){
 	ele.width = w, ele.height = h;
 	ele.id = id;
 	document.body.appendChild(ele);
+	ele.style.cursor = 'crosshair';
 	return ele;
 }
 function Poly(){
@@ -404,6 +405,43 @@ Object.assign(Draw.prototype, {
 			this.fillColor = toHexColor(r, g);
 		}
 		this.fillColor = toHexColor(r, g, b, a);
+	},
+	strokeSetA: function(obj){
+		function t0(n){
+			var a0 = Math.change(n,10,16);
+			if(n<16) a0 = "0"+a0;
+			return a0;
+		}
+		if(typeof obj == 'string'){
+			this.strokeColor[7] = obj[0] || "f";
+			this.strokeColor[8] = obj[1] || "f";
+		}else if(typeof obj == 'number'){
+			obj = constrain(obj, 0, 255);
+			var str = t0(obj);
+			this.strokeColor[7] = str[0];
+			this.strokeColor[8] = str[1];
+		}else{
+			console.log('What did you enter?');
+		}
+	},
+	fillSetA: function(){
+		// copy of this.strokeSetA()
+		function t0(n){
+			var a0 = Math.change(n,10,16);
+			if(n<16) a0 = "0"+a0;
+			return a0;
+		}
+		if(typeof obj == 'string'){
+			this.fillColor[7] = obj[0] || "f";
+			this.fillColor[8] = obj[1] || "f";
+		}else if(typeof obj == 'number'){
+			obj = constrain(obj, 0, 255);
+			var str = t0(obj);
+			this.fillColor[7] = str[0];
+			this.fillColor[8] = str[1];
+		}else{
+			console.log('What did you enter?');
+		}
 	},
 	translate: function(x,y){
 		if(!y){
@@ -1468,6 +1506,8 @@ Object.assign(Physics.Obj.prototype, {
 	getMass: function(density){
 		return density*this.shape.getLength();
 	},
+	interactWithObj: function(obj){
+	},
 	draw: function(d){
 		var cm = this.getCenter();
 		// spins around the center
@@ -1488,6 +1528,16 @@ Physics.Rope = function(){
 Object.assign(Physics.Rope.prototype, {
 	set: function(){}
 });
+function PhysicsWorld(){
+	this.particleSystem = new ParticleSystem();
+	this.objs = [];
+	this.gravity = 1/4;
+}
+Object.assign(PhysicsWorld.prototype, {
+	addObj: function(){},
+	addPg: function(){},
+	addRope: function(){}
+});
 function SlideShow(space, tool){
 	if(arguments.length<2){
 		throw new Error('Need 2 parameters for constructing a SlideShow,  but '+arguments.length+' is present');
@@ -1501,11 +1551,15 @@ function SlideShow(space, tool){
 	this.finished = false;
 	this.tool = tool;
 	var move = this.move, running = this.running;
-	function f10(event){
-	};
-	space.addEventListener('mousedown', f10, false);
-	space.addEventListener('keydown', f10, false);
+	function frun(event){
+	}
+	space.addEventListener('mousedown', frun, false);
+	space.addEventListener('keydown', frun, false);
+
+	this.transStyles = [];
 }
+Object.assign(SlideShow.trans, {
+});
 Object.assign(SlideShow.prototype, {
 	draw: function(index){
 		this.slides[index](this.tool);
