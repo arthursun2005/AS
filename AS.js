@@ -1,4 +1,3 @@
-
 /*****************************
 	Author: Arthur Sun
 	Use: -----
@@ -8,7 +7,6 @@
 document.body.style.textAlign = "center";
 document.body.style.fontFamily = "monospace";
 function createCanvas(id, w = window.innerWidth, h = window.innerHeight, sl){
-	if(!id) console.warn("Best to enter an id in createCanvas()");
 	if(arguments.length == 2){
 		w = window.innerWidth*arguments[1];
 		h = window.innerHeight*arguments[1];
@@ -19,6 +17,7 @@ function createCanvas(id, w = window.innerWidth, h = window.innerHeight, sl){
 	ele.width = w, ele.height = h;
 	ele.id = id;
 	document.body.appendChild(ele);
+	return ele;
 }
 function Poly(){
 	var a = arguments;
@@ -75,9 +74,9 @@ Math.change = function(num,a,b){
 function toHexColor(r,g,b,a = 255){
 	var _a = arguments;
 	if(_a.length == 1){
-		if(typeof _a[0] == 'string'){
+		if(typeof r == 'string'){
 			return r;
-		}else if(typeof _a[0] == 'number'){
+		}else if(typeof r == 'number'){
 			g = r;
 			b = r;
 			a = 255;
@@ -130,7 +129,7 @@ Object.assign(Clock.prototype, {
 		this.start = start;
 	},
 	update: function(){
-		if(running) this.time+=this.lastRecordTime;
+		if(this.running) this.time+=this.lastRecordTime;
 		this.lastRecordTime = Date.now();
 	},
 	reset: function(){
@@ -185,14 +184,24 @@ Object.assign(Point.prototype, {
 		}
 		return this;
 	},
-	add: function(v){
-		this.x+=v.x;
-		this.y+=v.y;
+	add: function(v,w){
+		if(w){
+			this.x+=v;
+			this.y+=w;
+		}else{
+			this.x+=v.x;
+			this.y+=v.y;
+		}
 		return this;
 	},
-	sub: function(v){
-		this.x-=v.x;
-		this.y-=v.y;
+	sub: function(v,w){
+		if(w){
+			this.x-=v;
+			this.y-=w;
+		}else{
+			this.x-=v.x;
+			this.y-=v.y;
+		}
 		return this;
 	},
 	cross: function(v){
@@ -370,11 +379,21 @@ Object.assign(Draw.prototype, {
 	},
 	stroke: function(r,g,b,a){
 		this._stroke = true;
-		this.strokeColor = toHexColor(r,g,b,a);
+		if(!g){
+			this.strokeColor = toHexColor(r);
+		}else if(!b){
+			this.strokeColor = toHexColor(r, g);
+		}
+		this.strokeColor = toHexColor(r, g, b, a);
 	},
 	fill: function(r,g,b,a){
 		this._fill = true;
-		this.fillColor = toHexColor(r,g,b,a);
+		if(!g){
+			this.fillColor = toHexColor(r);
+		}else if(!b){
+			this.fillColor = toHexColor(r, g);
+		}
+		this.fillColor = toHexColor(r, g, b, a);
 	},
 	translate: function(x,y){
 		if(!y){
@@ -674,7 +693,12 @@ Geometry.Graph = function(x,y,f){
 };
 Object.assign(Geometry.Graph.prototype, {
 	background: function(r,g,b,a){
-		this._background = toHexColor(r,g,b,a);
+		if(!g){
+			this._background = toHexColor(r);
+		}else if(!b){
+			this._background = toHexColor(r, g);
+		}
+		this._background = toHexColor(r, g, b, a);
 	},
 	graph: function(d){
 		var ad = this.axisData;
@@ -829,7 +853,7 @@ Object.assign(Geometry.Line.prototype, {
 	length: function(){
 		return dist(this.p1,this.p2);
 	},
-	draw: function(){
+	draw: function(d){
 		d.strokeWeight(1);
 		d.stroke(255,0,255);
 		d.line(this.p1,this.p2);
@@ -855,24 +879,37 @@ Object.assign(Geometry.Line.prototype, {
 			p1.rotate(a);
 			p1.add(p2);
 		},
+		p: function(p, a){
+			p2.sub(p); p1.sub(p);
+			p2.rotate(a); p1.rotate(a);
+			p2.add(p); p1.add(p);
+		},
+	},
+	rotate: function(a){
+		p2.rotate(a); p1.rotate(a);
 	},
 	getDataOnPoint: function(p){
 		var data = {};
 		var l = this.length();
-		var _p = p.copy(), a = this.angle(), c = this.center();
+		var _p = p.copy(), a = this.angle()+Math.PI/2, c = this.center();
 		_p.sub(c);
 		_p.changeAxis(a);
+		_p.x = _p.x, _p.y = Math.abs(_p.y);
 		if(_p.y>l/2){
 			var cp = this.closestPointAround(p)
 			data.dist = Point.sub(cp, p).mag();
 			data.p = cp.copy();
 		}else{
 			data.dist = _p.x;
+			var n = new Point(0, -_p.x);
+			n.rotate(a-Math.PI/2);
+			n.add(p);
+			data.p = n;
 		}
 		return data;
 	},
 	closestPointAround: function(p){
-		return dist(p,this.p1)>dist(p,this.p2) ? p2.copy() : p1.copy();
+		return dist(p,this.p1)>dist(p,this.p2) ? this.p2.copy() : this.p1.copy();
 	}
 });
 Geometry.Shape = function(){
@@ -885,8 +922,7 @@ Geometry.Shape = function(){
 	}else{
 		this.points = [];
 	}
-	this.lines = [];
-	this.join();
+	this.c = '#56a1e4';
 };
 Object.assign(Geometry.Shape.prototype, {
 	_points: function(){
@@ -908,29 +944,20 @@ Object.assign(Geometry.Shape.prototype, {
 				this.points[i] = ps[i-1].copy();
 			}
 		}
-		this.join();
 	},
-	join: function(){
-		this.lines = [];
-		for(var i=0;i<this.points.length;i++){
-			var a = i == this.points.length-1 ? 0 : (i+1);
-			var p1 = this.points[i], p2 = this.points[a];
-			this.lines.push(new Geometry.Line(p1,p2));
-		}
-	},
-	draw: function(d, c){
+	draw: function(d){
+		d.strokeWeight(1);
+		d.stroke(0);
+		d.noFill();
 		if(!d){
-			console.warn("No parameter for Geometry.Shape.prototype.draw");
+			console.warn("Geometry.Shape.draw: no parameter");
 			return;
 		}
-		var _c = c || "#ff00ff";
-		for(var i=0;i<this.points.length;i++){
-			var a = i == this.points.length-1 ? 0 : (i+1);
-			var p1 = this.points[i], p2 = this.points[a];
-			d.strokeWeight(1);
-			d.stroke(_c);
-			d.line(p1,p2);
+		d.beginShape();
+		for(var i=0;i<this.points.length+1;i++){
+			d.vertex(this.points[i%this.points.length]);
 		}
+		d.endShape();
 	},
 	getCenter: function(){
 		if(this.points.length == 0){
@@ -938,9 +965,9 @@ Object.assign(Geometry.Shape.prototype, {
 		}
 		var sum = new Point();
 		for(var i=0;i<this.points.length;i++){
-			var a = i == this.points.length-1 ? 0 : (i+1);
+			var a = (i == this.points.length-1) ? 0 : (i+1);
 			var p1 = this.points[i], p2 = this.points[a];
-			sum.add(Point.scale(Point.add(p1,p2),1/2));
+			sum.add(Point.scale(Point.add(p1,p2),1/2*Point.sub(p1,p2).mag()));
 		}
 		return Point.scale(sum, 1/this.getLength());
 	},
@@ -965,11 +992,9 @@ Object.assign(Geometry.Shape.prototype, {
 	},
 	rect: function(x,y,w,h){
 		this.points = Geometry.pointsOfRect(x,y,w,h);
-		this.join();
 	},
 	circle: function(x,y,r,a,b,d = 5){
 		this.points = Geometry.pointsOnCircle(x,y,r,a,b,d);
-		this.join();
 	},
 	line: function(x1,y1,x2,y2,r = 5){
 		this.points = [];
@@ -987,7 +1012,6 @@ Object.assign(Geometry.Shape.prototype, {
 		this.sub(x1,y1);
 		this.rotate(a);
 		this.add(x1,y1);
-		this.join();
 	},
 	sub: function(p){
 		if(arguments.length == 2) var p = new Point(arguments[0],arguments[1]);
@@ -1019,6 +1043,16 @@ Object.assign(Geometry.Shape.prototype, {
 			}
 		}
 		return {obj: c, id: i};
+	},
+	inShape: function(p){
+		var p0 = this.points[0];
+		for(var i=1;i<this.points.length-1;i++){
+			var l = new Geometry.Line(this.points[i], this.points[i+1]);
+			var a = Math.PI/2-Point.sub(p, l.center()).angle();
+			l.rotateAround.p(p, a);
+			if(p.x<l.p1.x || p.x>l.p2.x) return false;
+		}
+		return true;
 	}
 });
 Object.assign(Physics, {
@@ -1043,7 +1077,12 @@ Physics.Particle = function(x,y){
 	this.pressure = 0;
 };
 Physics.Particle.prototype.color = function(r,g,b,a){
-	this.c = toHexColor(r,g,b,a);
+	if(!g){
+		this.c = toHexColor(r);
+	}else if(!b){
+		this.c = toHexColor(r, g);
+	}
+	this.c = toHexColor(r, g, b, a);
 };
 Physics.Particle.prototype.applyForce = function(f){
 	this.v.add(Point.scale(f, 1/this.mass));
@@ -1304,7 +1343,6 @@ Object.assign(Physics.ParticleSystem.prototype, {
 });
 Physics.Obj = function(shape){
 	this.shape = shape || new Geometry.Shape();
-	this.p = new Point(x,y);
 	this.v = new Point();
 	this.angle = 0;
 	this.scale = 1;
@@ -1317,7 +1355,12 @@ Physics.Obj = function(shape){
 };
 Object.assign(Physics.Obj.prototype, {
 	color: function(r,g,b,a){
-		this._color = toHexColor(r,g,b,a);
+		if(!g){
+			this._color = toHexColor(r);
+		}else if(!b){
+			this._color = toHexColor(r, g);
+		}
+		this._color = toHexColor(r, g, b, a);
 	},
 	addPoint: function(p, index){
 		this.shape.addPoint(p, index);
@@ -1326,9 +1369,9 @@ Object.assign(Physics.Obj.prototype, {
 		var ps = [];
 		for(var i=0;i<this.shape.points.length;i++){
 			ps[i] = new Point();
+			ps[i].add(this.shape.points[i]);
 			ps[i].rotate(this.angle);
 			ps[i].scale(this.scale);
-			ps[i].add(this.p);
 		}
 		var newShape = new Geometry.Shape(ps);
 		return newShape;
@@ -1346,11 +1389,12 @@ Object.assign(Physics.Obj.prototype, {
 		var a = d.angle();
 		F.changeAxis(a);
 		this.v.add(Point.scale(Point.polar(F.x, a), 1/m));
-		var tl = F.y;
-		//this.v.add(Point.scale(Point.polar(F.y, a-Math.PI/2), 1/m*l1));
+		var l1 = 1/r*F.y, l2 = (1-l1)*F.y;
+		this.v.add(Point.scale(Point.polar(F.y, a-Math.PI/2), 1/m*l1));
+		this.spin-=l2/m;
 	},
 	update: function(){
-		this.p.add(this.v);
+		this.shape.add(this.v);
 		this.angle+=this.spin;
 		this.timer.update();
 	},
@@ -1361,13 +1405,17 @@ Object.assign(Physics.Obj.prototype, {
 		return density*this.shape.getLength();
 	},
 	draw: function(d){
-		d.translate(this.p);
+		var cm = this.getCenter();
+		// spins around the center
+		this.shape.sub(cm);
+		d.translate(cm);
 		d.rotate(this.angle);
 		d.scale(this.scale);
-		this.shape.draw(d, this._color);
+		this.shape.draw(d, 0);
 		d.scale(1/this.scale);
 		d.rotate(-this.angle);
-		d.translate(this.p.minus());
+		d.translate(cm.minus());
+		this.shape.add(cm);
 	}
 });
 Physics.Rope = function(){
