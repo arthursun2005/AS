@@ -25,15 +25,15 @@
 	var mouse = new Point(center);
 	function f(e){
 		var x = e.clientX-(window.innerWidth-ww)/2;
-		var y = e.clientY-(window.innerHeight-hh)/2;
+		var y = e.clientY-(window.innerHeight-hh)/2-10;
 		mouse.set(x,y);
 	}
 	window.addEventListener('mousemove', f, false);
 	var s = new Geometry.Shape();
-	s.line(300,300,600,300);
+	s.line(300,300,800,300,15);
+	s.addPoint(500,200);
 	var o = new Physics.Obj(s);
-	var l = new Geometry.Line(200,300,500,500);
-	space.style.cursor = 'none';
+	space.style.cursor = 'crosshair';
 	function run(){
 		//background
 		tool.noStroke();
@@ -43,13 +43,13 @@
 		/****/
 		o.draw(tool);
 		o.update(tool);
-		l.draw(tool);
-		tool.fill(255,0,0);
-		tool.noStroke();
-		tool.ellipse(mouse.x,mouse.y,1.5,1.5);
-
-		var p = l.getDataOnPoint(mouse).p;
-		tool.ellipse(p.x,p.y,10,10);
+		tool.fill(0,0,0);
+		if(o.shape.inShape(mouse)){
+			var hit = true;
+		}else{
+			var hit = false;
+		}
+		tool.text(hit,100,100);
 		setTimeout(run, 5);
 	}
 	run();

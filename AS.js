@@ -592,6 +592,11 @@ Object.assign(Draw.prototype, {
 		this.d1 = false;
 	},
 	vertex: function(x,y){
+		if(!y && x instanceof Point){
+			var _x = x;
+			var y = _x.y;
+			var x = _x.x;
+		}
 		if(this.d1){
 			this.d0.moveTo(this.last.x,this.last.y);
 			this.d0.lineTo(x,y);
@@ -627,7 +632,9 @@ Object.assign(Geometry, {
 		var points = [];
 		var p1 = new Point(x1,y1), p2 = new Point(x2,y2);
 		var d = Point.sub(p2,p1), m = d.mag(), a = d.angle();
-		for(var i=0;i<=m;i+=s) points.push(new Point(Math.cos(a)*i+p1.x,Math.sin(a)*i+p1.y));
+		for(var i=0;i<=m;i+=s){
+			points.push(Point.add(Point.polar(i, a), p1));
+		}
 		return points;
 	},
 	pointsOnCircle: function(x,y,r,_s = 0,_f = 2*Math.PI,d = 1){
@@ -862,31 +869,32 @@ Object.assign(Geometry.Line.prototype, {
 		var p = Point.add(this.p1,this.p2);
 		return Point.scale(p,1/2);
 	},
-	rotateAround: {
-		center: function(a){
-			var c = this.center();
-			p2.sub(c); p1.sub(c);
-			p2.rotate(a); p1.rotate(a);
-			p2.add(c); p1.add(c);
-		},
-		p1: function(a){
-			p2.sub(p1);
-			p2.rotate(a);
-			p2.add(p1);
-		},
-		p2: function(a){
-			p1.sub(p2);
-			p1.rotate(a);
-			p1.add(p2);
-		},
-		p: function(p, a){
-			p2.sub(p); p1.sub(p);
-			p2.rotate(a); p1.rotate(a);
-			p2.add(p); p1.add(p);
-		},
-	},
 	rotate: function(a){
 		p2.rotate(a); p1.rotate(a);
+	},
+	copy: function(){
+		return new this.constructor(this.p1,this.p2);
+	},
+	rotateAroundCenter: function(a){
+		var c = this.center();
+		this.p2.sub(c); this.p1.sub(c);
+		this.p2.rotate(a); this.p1.rotate(a);
+		this.p2.add(c); this.p1.add(c);
+	},
+	rotateAroundp1: function(a){
+		this.p2.sub(this.p1);
+		this.p2.rotate(a);
+		this.p2.add(this.p1);
+	},
+	rotateAroundp2: function(a){
+		this.p2.sub(this.p1);
+		this.p2.rotate(a);
+		this.p2.add(this.p1);
+	},
+	rotateAroundp: function(p, a){
+		this.p2.sub(p); this.p1.sub(p);
+		this.p2.rotate(a); this.p1.rotate(a);
+		this.p2.add(p); this.p1.add(p);
 	},
 	getDataOnPoint: function(p){
 		var data = {};
@@ -933,29 +941,32 @@ Object.assign(Geometry.Shape.prototype, {
 		return ps;
 	},
 	addPoint: function(p, index){
+		if(typeof p == 'number' && typeof index == 'number'){
+			var _p = p, _i = index;
+			p = new Point(_p, _i);
+			index = undefined;
+		}
 		// inserting after
 		if(!index) index = this.closestPointAround(p).id;
 		index = constrain(index, 0, this.points.length);
 		var ps = this._points();
 		var _p = p.copy();
-		this.points[index] = _p;
-		if(index<this.points.length){
-			for(var i=index+1;i<this.points.length+1;i++){
-				this.points[i] = ps[i-1].copy();
-			}
+		this.points[index+1] = _p;
+		for(var i=index+2;i<this.points.length-1;i++){
+			this.points[i] = ps[i+1].copy();
 		}
 	},
 	draw: function(d){
-		d.strokeWeight(1);
-		d.stroke(0);
-		d.noFill();
+		d.strokeWeight(1.5);
+		d.stroke(120,170,200);
 		if(!d){
 			console.warn("Geometry.Shape.draw: no parameter");
 			return;
 		}
 		d.beginShape();
 		for(var i=0;i<this.points.length+1;i++){
-			d.vertex(this.points[i%this.points.length]);
+			var p = this.points[i%this.points.length];
+			d.vertex(p);
 		}
 		d.endShape();
 	},
@@ -1037,19 +1048,21 @@ Object.assign(Geometry.Shape.prototype, {
 	},
 	closestPointAround: function(p){
 		var c = this.points[0].copy();
+		var _i = 0;
 		for(var i=1;i<this.points.length;i++){
 			if(Point.sub(c,p).mag()>Point.sub(this.points[i],p).mag()){
 				c = this.points[i].copy();
+				_i = i;
 			}
 		}
-		return {obj: c, id: i};
+		return {obj: c, id: _i};
 	},
 	inShape: function(p){
 		var p0 = this.points[0];
 		for(var i=1;i<this.points.length-1;i++){
 			var l = new Geometry.Line(this.points[i], this.points[i+1]);
-			var a = Math.PI/2-Point.sub(p, l.center()).angle();
-			l.rotateAround.p(p, a);
+			var a = Point.sub(p, l.center()).angle();
+			l.rotateAroundp(p, a);
 			if(p.x<l.p1.x || p.x>l.p2.x) return false;
 		}
 		return true;
@@ -1411,7 +1424,7 @@ Object.assign(Physics.Obj.prototype, {
 		d.translate(cm);
 		d.rotate(this.angle);
 		d.scale(this.scale);
-		this.shape.draw(d, 0);
+		this.shape.draw(d);
 		d.scale(1/this.scale);
 		d.rotate(-this.angle);
 		d.translate(cm.minus());
