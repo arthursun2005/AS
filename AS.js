@@ -58,6 +58,16 @@ Math.sum = function(a,b,e) {
 	for(var i=a;i<b;i++){num+=eval(e);}
 	return num;
 };
+Math.isPrime = function(num){
+	num = Math.floor(Math.abs(num));
+	function ii(n){
+		return (Math.round(n)-n == 0) ? true : false;
+	}
+	for(var i=2;i<=Math.sqrt(num);i++){
+		if(ii(num/i)) return false;
+	}
+	return true;
+};
 const letters = [
 	"A","B","C","D","E",
 	"F","G","H","I","J",
@@ -1058,12 +1068,13 @@ Object.assign(Geometry.Shape.prototype, {
 		return {obj: c, id: _i};
 	},
 	inShape: function(p){
-		var p0 = this.points[0];
-		for(var i=1;i<this.points.length-1;i++){
-			var l = new Geometry.Line(this.points[i], this.points[i+1]);
-			var a = Point.sub(p, l.center()).angle();
+		var hit = 0;
+		for(var i=0;i<this.points.length;i++){
+			var l = new Geometry.Line(this.points[i], this.points[(i+1)%this.points.length]);
+			var a = Math.PI/2-Point.sub(p, l.center()).angle();
 			l.rotateAroundp(p, a);
-			if(p.x<l.p1.x || p.x>l.p2.x) return false;
+			var x1 = Math.min(l.p1.x, l.p2.x), x2 = Math.max(l.p1.x, l.p2.x);
+			if(p.x<l.p1.x-1 || p.x>l.p2.x+1) return false;
 		}
 		return true;
 	}
@@ -1407,6 +1418,10 @@ Object.assign(Physics.Obj.prototype, {
 		this.spin-=l2/m;
 	},
 	update: function(){
+		if(this.fixed){
+			this.v = new Point();
+			this.spin = 0;
+		}
 		this.shape.add(this.v);
 		this.angle+=this.spin;
 		this.timer.update();
