@@ -34,6 +34,7 @@
 	s.addPoint(500,200);
 	var o = new Physics.Obj(s);
 	space.style.cursor = 'crosshair';
+	console.log(o.getRealShape());
 	function run(){
 		//background
 		tool.noStroke();
@@ -44,7 +45,7 @@
 		o.draw(tool);
 		o.update(tool);
 		tool.fill(0,0,0);
-		if(o.shape.inShape(mouse)){
+		if(o.getRealShape().inShape(mouse)){
 			var hit = true;
 		}else{
 			var hit = false;

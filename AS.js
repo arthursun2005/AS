@@ -931,14 +931,21 @@ Object.assign(Geometry.Line.prototype, {
 	}
 });
 Geometry.Shape = function(){
+	this.points = [];
 	if(arguments.length>0){
-		if(arguments[0] instanceof Point){
-			for(var i=0;i<arguments.length;i++) this.points[i] = arguments[i].copy();
+		if(isArray(arguments[0])){
+			for(var i=0;i<arguments[0].length;i++){
+				this.points.push(arguments[0][i].copy());
+			}
+		}else if(arguments[0] instanceof Point){
+			for(var i=0;i<arguments.length;i++){
+				this.points.push(arguments[i].copy());
+			}
 		}else{
-			for(var i=0;i<arguments.length-1;i+=2) this.points.push(new Point(arguments[i],arguments[i+1]));
+			for(var i=0;i<arguments.length-1;i+=2){
+				this.points.push(new Point(arguments[i],arguments[i+1]));
+			}
 		}
-	}else{
-		this.points = [];
 	}
 	this.c = '#56a1e4';
 };
@@ -1391,20 +1398,34 @@ Object.assign(Physics.Obj.prototype, {
 	},
 	getRealShape: function(){
 		var ps = [];
+		var c = this.getCenter();
 		for(var i=0;i<this.shape.points.length;i++){
 			ps[i] = new Point();
-			ps[i].add(this.shape.points[i]);
+			ps[i].add(c);
 			ps[i].rotate(this.angle);
 			ps[i].scale(this.scale);
+			ps[i].sub(c);
+			ps[i].add(this.shape.points[i]);
 		}
 		var newShape = new Geometry.Shape(ps);
 		return newShape;
+	},
+	_longestPointFromCenter: function(){
+		var c = this.getCenter();
+		var p = this.shape.points[0].copy();
+		for(var i=1;i<this.shape.points.length;i++){
+			if(Point.sub(c,p).mag()<Point.sub(c,this.shape.points[i]).mag()){
+				p = this.shape.points[i].copy();
+			}
+		}
+		return p;
 	},
 	applyForce: function(p,fv){
 		if(this.shape.points.length == 0){
 			console.warn("Cannot applyForce: no points in shape, add a point to shape");
 			return;
 		}
+		var R = Point.sub(c, this._longestPointFromCenter()).mag();
 		var c = this.getCenter();
 		var m = this.getMass(this.density);
 		var F = fv.copy();
@@ -1413,7 +1434,7 @@ Object.assign(Physics.Obj.prototype, {
 		var a = d.angle();
 		F.changeAxis(a);
 		this.v.add(Point.scale(Point.polar(F.x, a), 1/m));
-		var l1 = 1/r*F.y, l2 = (1-l1)*F.y;
+		var l1 = map(r,0,R,1,0)*F.y, l2 = (1-l1)*F.y;
 		this.v.add(Point.scale(Point.polar(F.y, a-Math.PI/2), 1/m*l1));
 		this.spin-=l2/m;
 	},
