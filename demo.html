@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-	<title>Home Page AS game library</title>
+	<title>Demo</title>
 	<meta charset="utf-8">
 	<meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
 </head>
@@ -17,12 +17,26 @@
 	var center = new Point(ww/2,hh/2);
 	var tool = new Draw(space);
 	var mouse = new Point(center);
+	var world = new PhysicsWorld(space);
 	function f(e){
 		var x = e.offsetX;
 		var y = e.offsetY;
 		mouse.set(x,y);
 	}
 	space.addEventListener('mousemove', f, false);
+	function f(e){
+	}
+	space.addEventListener('onclick', f, false);
+	var s = new Geometry.Shape();
+	s.rect(600,400,300,20);
+	var o = new Physics.Obj(s);
+	o.fixed = true;
+	world.addObj(o);
+	var s = new Geometry.Shape();
+	s.rect(600,200,300,20);
+	var o2 = new Physics.Obj(s);
+	o2.fixed = false;
+	world.addObj(o2);
 	function run(){
 		//background
 		tool.noStroke();
@@ -30,6 +44,7 @@
 		tool.fill(240,250,250);
 		tool.rect(0,0,ww,hh);
 		/****/
+		world.run();
 		setTimeout(run, 5);
 	}
 	run();
