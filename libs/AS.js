@@ -1584,6 +1584,7 @@ function PhysicsWorld(space){
 	this.objs = [];
 	this.gravity = 1/100;
 	this.tool = new Draw(space);
+	this.clock = new Clock();
 	this.init();
 }
 Object.assign(PhysicsWorld.prototype, {
@@ -1611,6 +1612,7 @@ Object.assign(PhysicsWorld.prototype, {
 			this.objs[i].v.y+=this.gravity;
 			this.objs[i].update();
 		}
+		this.clock.update();
 	},
 	draw: function(d){
 		for (var i = this.objs.length - 1; i >= 0; i--) {
@@ -1644,6 +1646,10 @@ function SlideShow(space, tool){
 	this.transStyles = [];
 }
 SlideShow.transitionsStyles = {
+	fade: function(){},
+	squares: function(){},
+	shuffle: function(){},
+	zoom: function(){},
 };
 Object.assign(SlideShow.prototype, {
 	draw: function(index){

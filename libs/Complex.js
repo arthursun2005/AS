@@ -20,6 +20,10 @@ Object.assign(Complex.prototype, {
 			this.re = 0, this.im = 0;
 		}
 	},
+	scale: function(s){
+		this.re*=s;
+		this.im*=s;
+	},
 	setFromPolar: function(r, a){
 		this.re = Math.cos(a)*r;
 		this.im = Math.sin(a)*r;
@@ -69,14 +73,14 @@ Object.assign(Complex.prototype, {
 			this.im-=c.im;
 		}
 	},
-	mult: function(c){
+	mul: function(c){
 		var _c = this.clone();
 		this.re = _c.re*c.re-_c.im*c.im;
 		this.im = _c.re*c.im+_c.im*c.re;
 	},
 	pow: function(c, k){
 		// z1^z2 = e^(z2*ln(z1))
-		var a = Complex.mult(c, this.ln(k));
+		var a = Complex.mul(c, this.ln(k));
 		this.set(a.exp());
 	},
 	clone: function(){
@@ -99,7 +103,7 @@ Object.assign(Complex.prototype, {
 		}else{
 			var v1 = new Complex(Math.exp(this.re));
 			var v2 = new Complex(1, this.im, 1);
-			return Complex.mult(v1, v2);
+			return Complex.mul(v1, v2);
 		}
 	}
 });
@@ -111,10 +115,10 @@ Object.assign(Complex, {
 		}
 		return sum;
 	},
-	mult: function(){
+	mul: function(){
 		var product = arguments[0].clone();
 		for(var i=1;i<arguments.length;i++){
-			product.mult(arguments[i]);
+			product.mul(arguments[i]);
 		}
 		return product;
 	},
