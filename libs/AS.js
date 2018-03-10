@@ -1552,6 +1552,7 @@ Object.assign(Physics.Obj.prototype, {
 						f.add(Point.polar(obj.spin, a+Math.PI/2));
 						return f;
 					}
+					var a = cal();
 				}
 			}
 		}
