@@ -80,8 +80,18 @@ Object.assign(Complex.prototype, {
 	},
 	pow: function(c, k){
 		// z1^z2 = e^(z2*ln(z1))
+		if(typeof c == 'number' && typeof k == 'number'){
+			c = new Complex(c, k);
+			k = arguments[2];
+		}else if(typeof c == 'number'){
+			c = new Complex(c, 0);
+			k = 0;
+		}
 		var a = Complex.mul(c, this.ln(k));
-		this.set(a.exp());
+		return (a.exp());
+	},
+	sqrt: function(){
+		return this.pow(1/2);
 	},
 	clone: function(){
 		return new this.constructor(this.re, this.im);
@@ -105,12 +115,56 @@ Object.assign(Complex.prototype, {
 			var v2 = new Complex(1, this.im, 1);
 			return Complex.mul(v1, v2);
 		}
+	},
+	floor: function(){
+		this.re = Math.floor(this.re);
+		this.im = Math.floor(this.im);
+	},
+	round: function(){
+		this.re = Math.round(this.re);
+		this.im = Math.round(this.im);
+	},
+	ceil: function(){
+		this.re = Math.ceil(this.re);
+		this.im = Math.ceil(this.im);
+	},
+	inverse: function(){
+		return new Complex(1/this.re, 1/this.im);
+	},
+	negate: function(){
+		return new Complex(-this.re, -this.im);
+	},
+	conj: function(){
+		return new Complex(this.re, -this.im);
+	},
+	toString: function(polarForm){
+		if(polarForm){
+			var m = this.mag(), a = this.angle();
+			return m+' '+a;
+		}else{
+			var r = '', a = this.re, b = this.im;
+			if(a == 0 && b == 0){
+				return 0;
+			}
+			if(a!=0) r+=a;
+			if(b!=0){
+				if(b<0) r+='-';
+				else if(a!=0) r+='+';
+				r+=Math.abs(b);
+				r+='i';
+			}
+			return r;
+		}
+	},
+	equals: function(a){
+		if(this.re == a.re && this.im == a.im) return true;
+		else return false;
 	}
 });
 Object.assign(Complex, {
 	add: function(){
-		var sum = new Complex();
-		for(var i=0;i<arguments.length;i++){
+		var sum = arguments[0].clone();
+		for(var i=1;i<arguments.length;i++){
 			sum.add(arguments[i]);
 		}
 		return sum;
@@ -127,9 +181,33 @@ Object.assign(Complex, {
 		_a.sub(b);
 		return a;
 	},
-	pow: function(a, b, k){
-		var _a = a.clone();
-		_a.pow(b, k);
+	pow: function(){
+		var a = arguments;
+		var _a = a[0].clone();
+		if(typeof a[a.length-1] == 'number'){
+			for(var i=1;i<arguments.length-1;i++){
+				_a = _a.pow(a[i], a[a.length-1]);
+			}
+		}else{
+			for(var i=1;i<arguments.length;i++){
+				_a = _a.pow(a[i], 0);
+			}
+		}
+		return _a;
+	},
+	pow2: function(){
+		var a = arguments;
+		if(typeof a[a.length-1] == 'number'){
+			var _a = a[arguments.length-2].clone();
+			for(var i=arguments.length-3;i>=0;i--){
+				_a = _a.pow(a[i], a[a.length-1]);
+			}
+		}else{
+			var _a = a[arguments.length-1].clone();
+			for(var i=arguments.length-2;i>=0;i--){
+				_a = _a.pow(a[i], 0);
+			}
+		}
 		return _a;
 	},
 });
