@@ -129,8 +129,8 @@ function toHexColor(r,g,b,a = 255){
 	}
 	return "#"+t0(r)+t0(g)+t0(b)+t0(a);
 }
-function toNum(){}
-function toColor(){}
+function mixColors(a, b, k){
+}
 function constrain(value, min, max){
 	if(value<=min) return min;
 	if(value>=max) return max;
@@ -380,6 +380,7 @@ Object.assign(Complex, {
 		return _a;
 	},
 });
+const z_ = Complex;
 function Point(x,y){
 	if(!y && x instanceof Point){
 		this.x = x.x;
@@ -418,14 +419,9 @@ Object.assign(Point.prototype, {
 	dot: function(v){
 		return this.x*v.x+this.y*v.y;
 	},
-	mul: function(v, c){
-		if(c){
-			this.x = this.x*v.x-this.y*v.y,
-			this.y = this.x*v.y+this.y*v.x;
-		}else{
-			this.x = this.x*v.x+this.y*v.y,
-			this.y = this.x*v.y+this.y*v.x;
-		}
+	mul: function(v){
+		this.x = this.x*v.x+this.y*v.y,
+		this.y = this.x*v.y+this.y*v.x;
 		return this;
 	},
 	add: function(v,w){
@@ -1200,6 +1196,7 @@ Object.assign(Geometry.Line.prototype, {
 			n.add(p);
 			data.p = n;
 		}
+		data.dist = Math.abs(data.dist);
 		return data;
 	},
 	closestPointAround: function(p){
@@ -1329,9 +1326,12 @@ Object.assign(Geometry.Shape.prototype, {
 			this.points[i].add(p);
 		}
 	},
-	rotate: function(a){
+	rotate: function(a, p){
+		if(p == undefined) p = new Point();
 		for (var i = this.points.length - 1; i >= 0; i--) {
+			this.points[i].sub(p);
 			this.points[i].rotate(a);
+			this.points[i].add(p);
 		}
 	},
 	scale: function(s){
@@ -1700,11 +1700,12 @@ Object.assign(Physics.Obj.prototype, {
 		var c = this.getCenter();
 		for(var i=0;i<this.shape.points.length;i++){
 			ps[i] = new Point();
-			ps[i].add(c);
-			ps[i].rotate(this.angle);
+			//ps[i].add(c);
+			
 			ps[i].scale(this.scale);
-			ps[i].sub(c);
+			//ps[i].sub(c);
 			ps[i].add(this.shape.points[i]);
+			ps[i].rotate(this.angle);
 		}
 		var newShape = new Geometry.Shape(ps);
 		return newShape;
@@ -1724,8 +1725,8 @@ Object.assign(Physics.Obj.prototype, {
 			console.warn("Cannot applyForce: no points in shape, add a point to shape");
 			return;
 		}
-		var R = Point.sub(c, this._longestPointFromCenter()).mag();
 		var c = this.getCenter();
+		var R = Point.sub(c, this._longestPointFromCenter()).mag();
 		var m = this.getMass(this.density);
 		var F = fv.copy();
 		var d = Point.sub(p,c);
@@ -1753,19 +1754,25 @@ Object.assign(Physics.Obj.prototype, {
 		return density*this.shape.getLength();
 	},
 	interactWithObj: function(obj){
-		for (var i = obj.points.length - 1; i >= 0; i--) {
-			var p = obj.points[i];
-			for (var i = this.points.length - 1; i >= 0; i--) {
-				var l = new Geometry.Line(this.points[i], this.points[(i+1)%this.points.length]);
+		var s1 = obj.getRealShape(), s2 = this.getRealShape();
+		for (var j = s1.points.length - 1; j >= 0; j--) {
+			var p = s1.points[j];
+			for (var i = s2.points.length - 1; i >= 0; i--) {
+				var l = new Geometry.Line(s2.points[i], s2.points[(i+1)%s2.points.length]);
 				var data = l.getDataOnPoint(p);
-				var mr = 3;
+				var mr = 10;
 				if(data.dist<mr){
+					console.log('hit');
+					var _p = data.p;
 					function cal(obj, p){
 						var f = obj.v.copy(), c = obj.getCenter(), a = Point.sub(c, p).angle();
 						f.add(Point.polar(obj.spin, a+Math.PI/2));
+						f.scale(100);
 						return f;
 					}
-					var a = cal();
+					var a = cal(this, p), b = cal(obj, _p);
+					this.applyForce(p, a);
+					obj.applyForce(_p, b);
 				}
 			}
 		}
@@ -1814,6 +1821,9 @@ Object.assign(PhysicsWorld.prototype, {
 	interactions: function(){
 		for (var i = this.objs.length - 1; i >= 0; i--) {
 			var o = this.objs[i];
+			for (var j = i - 1; j >= 0; j--) {
+				o.interactWithObj(this.objs[j]);
+			}
 		}
 		for (var i = this.objs.length - 1; i >= 0; i--) {
 			var obj = this.objs[i];

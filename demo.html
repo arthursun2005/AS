@@ -10,7 +10,7 @@
 </body>
 <script src="./libs/AS.js"></script>
 <script type="text/javascript">
-	var id = "example", size = 4.5/5;
+	var id = "example", size = 4.75/5;
 	createCanvas(id,size);
 	var space = document.getElementById(id);
 	var ww = space.width, hh = space.height;
@@ -18,15 +18,15 @@
 	var tool = new Draw(space);
 	var mouse = new Point(center);
 	var world = new PhysicsWorld(space);
-	function f(e){
+	function f1(e){
 		var x = e.offsetX;
 		var y = e.offsetY;
 		mouse.set(x,y);
 	}
-	space.addEventListener('mousemove', f, false);
-	function f(e){
+	space.addEventListener('mousemove', f1, false);
+	function f2(e){
 	}
-	space.addEventListener('onclick', f, false);
+	space.addEventListener('onclick', f2, false);
 	var s = new Geometry.Shape();
 	s.rect(600,400,300,20);
 	var o = new Physics.Obj(s);
@@ -34,9 +34,13 @@
 	world.addObj(o);
 	var s = new Geometry.Shape();
 	s.rect(600,200,300,20);
+	s.rotate(1, s.getCenter());
 	var o2 = new Physics.Obj(s);
 	o2.fixed = false;
 	world.addObj(o2);
+	world.gravity = 0.001;
+	var l = new Geometry.Line(0,0,ww,hh);
+	console.log(o2.getRealShape());
 	function run(){
 		//background
 		tool.noStroke();
@@ -45,8 +49,11 @@
 		tool.rect(0,0,ww,hh);
 		/****/
 		world.run();
+		tool.fill(0,0,0);
+		tool.text(l.getDataOnPoint(mouse).dist, 400,100);
+		l.draw(tool);
 		setTimeout(run, 5);
-		//console.error('你好');
+		//console.error('你好 is TRASH');
 	}
 	run();
 </script>
