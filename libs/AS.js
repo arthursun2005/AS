@@ -5,6 +5,7 @@
 	- modules -
 /*****************************/
 document.body.style.textAlign = "center";
+document.body.style.fontSize = "25px";
 document.body.style.fontFamily = "monospace";
 function createCanvas(id, w = window.innerWidth, h = window.innerHeight, sl){
 	if(arguments.length == 2){
