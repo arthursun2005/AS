@@ -15,7 +15,7 @@ long long lcm(long a, long b){
 }
 int main(int argc, char const *argv[])
 {
-	cout << "ready" << endl;
+	cout << "Ready" << endl;
 	while(true){
 		long a, b;
 		cin >> a;

@@ -21,23 +21,13 @@ function createCanvas(id, w = window.innerWidth, h = window.innerHeight, sl){
 	ele.style.cursor = 'crosshair';
 	return ele;
 }
-function Poly(){
+function Eq(){
 	var a = arguments;
-	if(a.length%2 != 0){
-		var massage = "Invalid use of Poly()"+"\nEnter an even number of arguments, the function will return a new function. \n\tPoly(a,b,c,d) will return \n\nfunction(x){\n\treturn a*Math.pow(x,b)+c*Math.pow(x,d)\n}";
-		throw new Error(massage);
+	if(a.length == 0){
+		return new Function('x', 'return x');
+	}else if(a.length == 1){
+		return new Function('x', 'return '+a[0]);
 	}
-	function f(x){
-		var value = 0;
-		for(var i=0;i<a.length-1;i+=2){
-			value+=Math.pow(x,a[i+1])*a[i];
-		}
-		if(x == "info"){
-			return a;
-		}
-		return value;
-	}
-	return f;
 }
 function isArray(obj){
 	if(typeof obj == "object" && (obj.length || typeof obj.push == "function")){
@@ -1599,11 +1589,16 @@ Object.assign(PhysicsWorld.prototype, {
 	addObj: function(obj){
 		this.objs.push(obj);
 	},
-	addElasticGroup: function(){},
-	addParticle: function(){},
-	addViscousParticle: function(){},
-	addTensileParticle: function(){},
-	addPowderParticle: function(){},
+	addElasticGroup: function(){
+	},
+	addParticle: function(){
+	},
+	addViscousParticle: function(){
+	},
+	addTensileParticle: function(){
+	},
+	addPowderParticle: function(){
+	},
 	addRope: function(){},
 	interactions: function(){
 		for (var i = this.objs.length - 1; i >= 0; i--) {
@@ -1648,7 +1643,7 @@ function SlideShow(space, tool){
 	this.finished = false;
 	this.tool = tool;
 	var move = this.move, running = this.running;
-	function frun(event){
+	function run(event){
 	}
 	space.addEventListener('mousedown', frun, false);
 	space.addEventListener('keydown', frun, false);
@@ -1656,10 +1651,14 @@ function SlideShow(space, tool){
 	this.transStyles = [];
 }
 SlideShow.transitionsStyles = {
-	fade: function(){},
-	squares: function(){},
-	shuffle: function(){},
-	zoom: function(){},
+	fade: function(){
+	},
+	squares: function(){
+	},
+	shuffle: function(){
+	},
+	zoom: function(){
+	},
 };
 Object.assign(SlideShow.prototype, {
 	draw: function(index){
@@ -1670,3 +1669,24 @@ Object.assign(SlideShow.prototype, {
 		this.draw(this.page);
 	}
 });
+(function(global){
+	global.init = function(){
+		var a = arguments;
+		var space = createCanvas();
+		const ww = space.width, hh = space.height;
+		var tool = new Draw(space);
+		var world = new PhysicsWorld(space);
+		var clock = new Clock();
+		var g = [
+			'space', 
+			'ww', 
+			'hh',
+			'tool',
+			'clock',
+			'world',
+		];
+		for(var i=0;i<g.length;i++){
+			global[g[i]] = g[i];
+		}
+	};
+})(this);

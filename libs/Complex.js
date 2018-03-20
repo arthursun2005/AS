@@ -1,6 +1,7 @@
 function Complex(a, b, c){
 	this.set(a,b,c);
 }
+// no trig functions :(
 Object.assign(Complex.prototype, {
 	set: function(a, b, c){
 		if(!b && a){
@@ -211,4 +212,3 @@ Object.assign(Complex, {
 		return _a;
 	},
 });
-const Z = Complex;
