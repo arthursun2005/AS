@@ -1630,6 +1630,17 @@ Object.assign(PhysicsWorld.prototype, {
 		if(this.tool) this.draw(this.tool);
 	}
 });
+function Button(x,y,w,h,t,f){
+	this.p = new Point(x, y);
+	this.d = new Point(w, h);
+	this.t = t || 'Press ME!';
+	this.f = f;
+	window.addEventListener('onclick', f, false);
+}
+Button.prototype = {
+	update: function(){},
+	draw: function(tool){}
+};
 function SlideShow(space, tool){
 	if(arguments.length<2){
 		throw new Error('Need 2 parameters for constructing a SlideShow,  but '+arguments.length+' is present');
@@ -1670,7 +1681,7 @@ Object.assign(SlideShow.prototype, {
 	}
 });
 (function(global){
-	global.init = function(){
+	global.initSpace = function(){
 		var a = arguments;
 		var space = createCanvas();
 		const ww = space.width, hh = space.height;
@@ -1680,13 +1691,13 @@ Object.assign(SlideShow.prototype, {
 		var g = [
 			'space', 
 			'ww', 
-			'hh',
-			'tool',
-			'clock',
-			'world',
+			'hh', 
+			'tool', 
+			'clock', 
+			'world', 
 		];
 		for(var i=0;i<g.length;i++){
-			global[g[i]] = g[i];
+			global[g[i]] = eval(g[i]);
 		}
 	};
 })(this);
