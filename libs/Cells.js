@@ -96,6 +96,8 @@
 			}
 		},
 		solve: function(){
+			function solve(){}
+			this.cells._sortLoop(solve, this._sort(this.cells));
 		},
 		update: function(){
 			for (var i = this.cells.length - 1; i >= 0; i--) {

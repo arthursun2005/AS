@@ -4,12 +4,8 @@
 	* * * * * *
 	- modules -
 /*****************************/
-function normalStyles(){
-	// css styles to my liking
-	document.body.style.textAlign = "center";
-	document.body.style.fontSize = "25px";
-	document.body.style.fontFamily = "monospace";
-}
+document.body.style.fontSize = "21px";
+document.body.style.fontFamily = "monospace";
 function createCanvas(id, w = window.innerWidth, h = window.innerHeight, sl){
 	if(arguments.length == 2){
 		w = window.innerWidth*arguments[1];
@@ -198,6 +194,27 @@ function toHexColor(r,g,b,a = 255){
 	return "#"+t0(r)+t0(g)+t0(b)+t0(a);
 }
 function mixColors(a, b, k){
+	function toObj(str){
+		str = str.substring(1,str.length);
+		r = Math.change(str.substring(0,2), 16, 10);
+		g = Math.change(str.substring(2,4), 16, 10);
+		b = Math.change(str.substring(4,6), 16, 10);
+		if(str.length<7){
+			a = 255;
+		}else{
+			a = Math.change(str.substring(6,8), 16, 10);
+		}
+		return {r: r,g: g,b: b,a: a};
+	}
+	var o1 = toObj(a), o2 = toObj(b);
+	var diff = {
+		r: o2.r-o1.r, 
+		g: o2.g-o1.g, 
+		b: o2.b-o1.b, 
+		a: o2.a-o1.a, 
+	};
+	o1.r+=diff.r*k, o1.g+=diff.g*k, o1.b+=diff.b*k, o1.a+=diff.a*k;
+	o2.r-=diff.r*k, o2.g-=diff.g*k, o2.b-=diff.b*k, o2.a-=diff.a*k;
 }
 function constrain(value, min, max){
 	if(value<=min) return min;
