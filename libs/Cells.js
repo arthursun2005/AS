@@ -40,9 +40,9 @@
 	**/
 	function Cell(x,y,r,_DNA){
 		if(x instanceof Point){
+			r = y, _DNA = r;
 			var _x = x.copy();
 			x = _x.x, y = _x.y;
-			r = arguments[1], _DNA = arguments[2];
 		}
 		this.p = new Point(x,y);
 		this.v = new Point();
@@ -88,7 +88,7 @@
 			for(var i=0;i<this.cells.length;i++){
 				var cell = this.cells[i];
 				var r = cell.r/3*1.8;
-				tool.fill(cell.c.r-30, cell.c.b-30, cell.c.b-30);
+				tool.fill(cell.c.r-40, cell.c.b-40, cell.c.b-40);
 				if(cell.innerColor) tool.fill(cell.innerColor);
 				tool.translate(cell.p);
 				tool.ellipse(0,0,r,r);
@@ -96,8 +96,6 @@
 			}
 		},
 		solve: function(){
-			for (var i = this.cells.length - 1; i >= 0; i--) {
-			}
 		},
 		update: function(){
 			for (var i = this.cells.length - 1; i >= 0; i--) {

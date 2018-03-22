@@ -4,9 +4,12 @@
 	* * * * * *
 	- modules -
 /*****************************/
-document.body.style.textAlign = "center";
-document.body.style.fontSize = "25px";
-document.body.style.fontFamily = "monospace";
+function normalStyles(){
+	// css styles to my liking
+	document.body.style.textAlign = "center";
+	document.body.style.fontSize = "25px";
+	document.body.style.fontFamily = "monospace";
+}
 function createCanvas(id, w = window.innerWidth, h = window.innerHeight, sl){
 	if(arguments.length == 2){
 		w = window.innerWidth*arguments[1];
@@ -58,6 +61,71 @@ Object.prototype.clone = function(){
 		}
 	}
 	return obj;
+};
+Array.prototype._sort = function(arr, changeObj){
+	// using my method to decrease time complexity
+	var r = 'r', p = 'p';
+	for(var key in changeObj){
+		switch(key){
+			case 'p': p = changeObj[key];
+			break;
+			case 'r': r = changeObj[key];
+			break;
+		}
+	}
+	var all = [];
+	var maxD = arr[0][r]*2;
+	var minP = arr[0][p].copy();
+	for (var i = arr.length - 1; i >= 1; i--) {
+		var c = arr[i];
+		if(c[r]>maxD/2) maxD = c[r]*2;
+		if(c[p].x<minP.x) minP.x = c[p].x;
+		if(c[p].y<minP.y) minP.y = c[p].y;
+	}
+	for (var i = arr.length - 1; i >= 0; i--) {
+		var c = arr[i];
+		var y = Math.floor((c[p].y-minP.y)/maxD);
+		var x = Math.floor((c[p].x-minP.x)/maxD);
+		if(!all[y]) all[y] = [];
+		if(!all[y][x]) all[y][x] = [];
+		all[y][x].push({obj: c, id: i});
+	}
+	return {all: all, minP: minP, maxD: maxD, arr: arr};
+};
+Array.prototype._sortLoop = function(f, obj, timesRadius = 2){
+	var all = obj.all, minP = obj.minP, maxD = obj.maxD, arr = obj.arr;
+	timesRadius = Math.round(timesRadius);
+	if(timesRadius%2 == 0){
+		// is even
+		var a = timesRadius/2-1;
+		var b = timesRadius/2;
+	}else{
+		// is odd
+		var a = Math.floor(timesRadius/2);
+		var b = a;
+	}
+	for (var i = arr.length - 1; i >= 0; i--) {
+		var c = arr[i];
+		if(timesRadius%2 == 0){
+			var y = Math.floor((c[p].y-minP.y-maxD/2)/maxD);
+			var x = Math.floor((c[p].x-minP.x-maxD/2)/maxD);
+		}else{
+			var y = Math.floor((c[p].y-minP.y)/maxD);
+			var x = Math.floor((c[p].x-minP.x)/maxD);
+		}
+		for(var py=y-a;py<=y+b;py++){
+			if(!all[py]) continue;
+			for(var px=x-a;px<=x+b;px++){
+				if(!all[py][px]) continue;
+				if(!(y>py && x>px)) continue;
+				for (var j = all[py][px].length - 1; j >= 0; j--) {
+					var j0 = all[py][px][j];
+					if(i == j0.id) continue;
+					if(f) f({obj1: c, obj2: j0.obj, id1: i, id2: j0.id, all: all, arr: arr, minP: minP, maxD: maxD});
+				}
+			}
+		}
+	}
 };
 Math.dx = 1e-6;
 Math.integral = function(f,a,b){
@@ -1486,12 +1554,11 @@ Object.assign(Physics.Obj.prototype, {
 		var c = this.getCenter();
 		for(var i=0;i<this.shape.points.length;i++){
 			ps[i] = new Point();
-			//ps[i].add(c);
-			
+			ps[i].add(c);
 			ps[i].scale(this.scale);
-			//ps[i].sub(c);
-			ps[i].add(this.shape.points[i]);
 			ps[i].rotate(this.angle);
+			ps[i].sub(c);
+			ps[i].add(this.shape.points[i]);
 		}
 		var newShape = new Geometry.Shape(ps);
 		return newShape;

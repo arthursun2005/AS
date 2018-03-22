@@ -12,7 +12,8 @@
 <script type="text/javascript">
 	initSpace();
 	var b = new Body(tool);
-	b.addCell(new Cell(center));
+	var c = new Cell(center);
+	b.addCell(c);
 	function run(){
 		background(0,0,0);
 		b.run();
