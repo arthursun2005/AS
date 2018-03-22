@@ -6,31 +6,10 @@
 	<meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
 </head>
 <style type="text/css">
-	#main {
-		display: none;
-	}
 </style>
 <h1>- Collections - </h1>
-<p>
-	Just a Collection
-</p>
 <body>
-	<div id="loading">Loading...</div>
-	<div id="main">
-		<iframe src="http://www.dl4.surge.sh" id="i1"></iframe>
-		<iframe src="http://www.equations.surge.sh" id="i2"></iframe>
-	</div>
 </body>
-<script src="./libs/AS.js"></script>
 <script type="text/javascript">
-	const _w = window.innerWidth, _h = window.innerHeight;
-	var cs = {};
-	for(var i=1;i<=2;i++){
-		cs['i'+i] = document.getElementById('i'+i);
-		cs['i'+i].width = _w, cs['i'+i].height = _h;
-	}
-	var child = document.getElementById('loading');
-	document.body.removeChild(child);
-	document.getElementById('main').style.display = 'block';
 </script>
 </html>

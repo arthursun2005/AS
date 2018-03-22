@@ -42,8 +42,9 @@ Array.prototype.clone = function(){
 		var o = this[i];
 		if(typeof o == 'object'){
 			arr[i] = o.clone();
+		}else{
+			arr[i] = this[i];
 		}
-		arr[i] = this[i];
 	}
 	return arr;
 };
@@ -51,10 +52,12 @@ Object.prototype.clone = function(){
 	var obj = {}, me = this;
 	for(var key in me){
 		if(typeof this[key] == 'object'){
-			var o = this[key].clone();
+			obj[key] = this[key].clone();
+		}else{
+			obj[key] = this[key];
 		}
-		obj[key] = this[key];
 	}
+	return obj;
 };
 Math.dx = 1e-6;
 Math.integral = function(f,a,b){
@@ -80,15 +83,21 @@ Math.isPrime = function(num){
 	}
 	return true;
 };
-const letters = [
-	"A","B","C","D","E",
-	"F","G","H","I","J",
-	"K","L","M","N","O",
-	"P","Q","R","S","T",
-	"U","V","W","X","Y",
-	"Z"
-];
-Math.isInt = function(n){return (this.round(Number(n)) == n);};
+function primeFactor(n){
+	var i = 2;
+	var factors = [];
+	while(n>1){
+		if(Math.isInt(n/i)){
+			factors.push(i);
+			n/=i;
+		}else{
+			i++;
+			while(!Math.isPrime(i)) i++;
+		}
+	}
+	return factors;
+}
+Math.isInt = function(n){return (this.round(Number(n)) == Number(n));};
 Math.change = function(num,a,b){
 	var n1 = parseInt(num,a);
 	return n1.toString(b);
@@ -1599,18 +1608,9 @@ Object.assign(PhysicsWorld.prototype, {
 	},
 	addPowderParticle: function(){
 	},
-	addRope: function(){},
-	interactions: function(){
-		for (var i = this.objs.length - 1; i >= 0; i--) {
-			var o = this.objs[i];
-			for (var j = i - 1; j >= 0; j--) {
-				o.interactWithObj(this.objs[j]);
-			}
-		}
-		for (var i = this.objs.length - 1; i >= 0; i--) {
-			var obj = this.objs[i];
-			this.particleSystem.interactWithObj(obj);
-		}
+	addRope: function(){
+	},
+	solve: function(){
 	},
 	update: function(){
 		for (var i = this.objs.length - 1; i >= 0; i--) {
@@ -1680,6 +1680,10 @@ Object.assign(SlideShow.prototype, {
 		this.draw(this.page);
 	}
 });
+
+
+
+
 (function(global){
 	global.initSpace = function(){
 		var a = arguments;
@@ -1688,6 +1692,8 @@ Object.assign(SlideShow.prototype, {
 		var tool = new Draw(space);
 		var world = new PhysicsWorld(space);
 		var clock = new Clock();
+		var center = new Point(ww/2, hh/2);
+		var mouse = new Point(center);
 		var g = [
 			'space', 
 			'ww', 
@@ -1695,9 +1701,26 @@ Object.assign(SlideShow.prototype, {
 			'tool', 
 			'clock', 
 			'world', 
+			'center',
+			'mouse',
 		];
 		for(var i=0;i<g.length;i++){
 			global[g[i]] = eval(g[i]);
 		}
+		function f(e){
+			mouse.set(e.offsetX, e.offsetY);
+		}
+		space.addEventListener('mousemove', f, false);
 	};
+	global.pointMouse = function(){
+		tool.noStroke();
+		tool.fill(255,0,0);
+		tool.ellipse(mouse.x,mouse.y,2,2);
+	};
+	global.background = function(a,b,c,d){
+		tool.noStroke();
+		tool.fill(a,b,c,d);
+		tool.rectMode('');
+		tool.rect(0,0,ww,hh);
+	}
 })(this);

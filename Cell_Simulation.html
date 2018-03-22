@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>
+		Cell Simulation
+	</title>
+</head>
+<body>
+</body>
+<script src="./libs/AS.js"></script>
+<script src="./libs/Cells.js"></script>
+<script type="text/javascript">
+	initSpace();
+	var b = new Body(tool);
+	b.addCell(new Cell(center));
+	function run(){
+		background(0,0,0);
+		b.run();
+		setTimeout(run, 5);
+	}
+	run();
+</script>
+</html>
