@@ -58,8 +58,9 @@ Object.prototype.clone = function(){
 	}
 	return obj;
 };
-Array.prototype._sort = function(arr, changeObj){
+Array.prototype._sort = function(changeObj){
 	// using my method to decrease time complexity
+	var arr = this;
 	var r = 'r', p = 'p';
 	for(var key in changeObj){
 		switch(key){
@@ -86,10 +87,10 @@ Array.prototype._sort = function(arr, changeObj){
 		if(!all[y][x]) all[y][x] = [];
 		all[y][x].push({obj: c, id: i});
 	}
-	return {all: all, minP: minP, maxD: maxD, arr: arr};
+	return {all: all, minP: minP, maxD: maxD, arr: arr, p: p};
 };
-Array.prototype._sortLoop = function(f, obj, timesRadius = 2){
-	var all = obj.all, minP = obj.minP, maxD = obj.maxD, arr = obj.arr;
+Array._sortLoop = function(f, obj, timesRadius = 2){
+	var all = obj.all, minP = obj.minP, maxD = obj.maxD, arr = obj.arr, p = obj.p;
 	timesRadius = Math.round(timesRadius);
 	if(timesRadius%2 == 0){
 		// is even
@@ -113,7 +114,7 @@ Array.prototype._sortLoop = function(f, obj, timesRadius = 2){
 			if(!all[py]) continue;
 			for(var px=x-a;px<=x+b;px++){
 				if(!all[py][px]) continue;
-				if(!(y>py && x>px)) continue;
+				if(!(y<py && x<px)) continue;
 				for (var j = all[py][px].length - 1; j >= 0; j--) {
 					var j0 = all[py][px][j];
 					if(i == j0.id) continue;
@@ -250,6 +251,14 @@ Object.assign(Clock.prototype, {
 	},
 	reset: function(){
 		this.set(Date.now());
+	},
+	clone: function(){
+		var clock = new Clock();
+		clock.time = this.time, 
+		clock.lastRecordTime = this.lastRecordTime, 
+		clock.start = this.start, 
+		clock.running = this.running;
+		return clock;
 	}
 });
 function Point(x,y){
@@ -280,6 +289,9 @@ Object.assign(Point.prototype, {
 		this.x*=s;
 		this.y*=s;
 		return this;
+	},
+	scale0: function(s){
+		return Point.scale(this, s);
 	},
 	inverse: function(){
 		return new Point(1/this.x,1/this.y);
@@ -1798,8 +1810,8 @@ Object.assign(SlideShow.prototype, {
 	};
 	global.pointMouse = function(){
 		tool.noStroke();
-		tool.fill(255,0,0);
-		tool.ellipse(mouse.x,mouse.y,2,2);
+		tool.fill(255,144,0);
+		tool.ellipse(mouse.x,mouse.y,2.5,2.5);
 	};
 	global.background = function(a,b,c,d){
 		tool.noStroke();

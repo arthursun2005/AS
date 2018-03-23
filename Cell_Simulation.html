@@ -12,7 +12,13 @@
 <script type="text/javascript">
 	initSpace();
 	var b = new Body(tool);
-	var c = new Cell(center);
+	for(var i=0;i<10;i++){
+	}
+	var c = new Cell(130,200);
+	c.v.x = 1;
+	b.addCell(c);
+	var c = new Cell(300,200);
+	c.r = 40;
 	b.addCell(c);
 	function run(){
 		background(0,0,0);
