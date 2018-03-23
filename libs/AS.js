@@ -199,13 +199,13 @@ function mixColors(a, b, k){
 		str = str.substring(1,str.length);
 		r = Math.change(str.substring(0,2), 16, 10);
 		g = Math.change(str.substring(2,4), 16, 10);
-		b = Math.change(str.substring(4,6), 16, 10);
+		_b = Math.change(str.substring(4,6), 16, 10);
 		if(str.length<7){
 			a = 255;
 		}else{
 			a = Math.change(str.substring(6,8), 16, 10);
 		}
-		return {r: r,g: g,b: b,a: a};
+		return {r: Number(r),g: Number(g),b: Number(_b),a: Number(a)};
 	}
 	var o1 = toObj(a), o2 = toObj(b);
 	var diff = {
@@ -214,8 +214,16 @@ function mixColors(a, b, k){
 		b: o2.b-o1.b, 
 		a: o2.a-o1.a, 
 	};
-	o1.r+=diff.r*k, o1.g+=diff.g*k, o1.b+=diff.b*k, o1.a+=diff.a*k;
-	o2.r-=diff.r*k, o2.g-=diff.g*k, o2.b-=diff.b*k, o2.a-=diff.a*k;
+	o1.r+=Math.floor(diff.r*k), o1.g+=Math.floor(diff.g*k), o1.b+=Math.floor(diff.b*k), o1.a+=Math.floor(diff.a*k);
+	o2.r-=Math.floor(diff.r*k), o2.g-=Math.floor(diff.g*k), o2.b-=Math.floor(diff.b*k), o2.a-=Math.floor(diff.a*k);
+	a3 = toHexColor(o1.r,o1.g,o1.b,o1.a);
+	b3 = toHexColor(o2.r,o2.g,o2.b,o2.a);
+	console.log(a3);
+	return {a:a3,b:b3};
+}
+function hexToNumber(str){
+	if(str.length<9) str[7] = 'f', str[8] = 'f';
+	return [str.substring(1,3), str.substring(3,5), str.substring(5,7), str.substring(7,9)];
 }
 function constrain(value, min, max){
 	if(value<=min) return min;
@@ -261,6 +269,43 @@ Object.assign(Clock.prototype, {
 		return clock;
 	}
 });
+function Timer(){
+	var a = arguments;
+	this.createByArray(a);
+}
+Timer.prototype = {
+	create: function(){
+		var a = arguments;
+		if(a.length%2 != 0){
+			console.warn('An odd number of arguments');
+			return;
+		}
+		for (var i = a.length - 1; i >= 1; i-=2) {
+			this._c(a[i-1], a[i]);
+		}
+	},
+	createByArray: function(arr){
+		if(arr.length%2 != 0){
+			console.warn('An odd number of values');
+			return;
+		}
+		for (var i = arr.length - 1; i >= 1; i-=2) {
+			this._c(arr[i-1], arr[i]);
+		}
+	},
+	_c: function(a,b){
+		if(this[a]) this[a].d = b;
+		else this[a] = {t: 0, d: b};
+	},
+	is: function(a){
+		return this[a].t == 0;
+	},
+	update: function(){
+		for(var key in this){
+			this[key].t = (this[key].t+1)%this[key].d;
+		}
+	}
+};
 function Point(x,y){
 	if(!y && x instanceof Point){
 		this.x = x.x;
@@ -358,6 +403,12 @@ Object.assign(Point.prototype, {
 		this.y/=this.mag();
 		return this;
 	},
+	normalized: function(){
+		var v = this.copy(), m = this.mag();
+		v.x/=m;
+		v.y/=m;
+		return v;
+	},
 	angle: function(){
 		var a = Math.atan2(this.y,this.x);
 		if(a<0) a+=2*Math.PI;
@@ -398,6 +449,25 @@ Object.assign(Point.prototype, {
 		this.set(Point.polar(m, a0));
 		return this;
 	},
+	isZero: function(){
+		return this.x == 0 && this.y == 0;
+	},
+	random: function(a,b,c,d){
+		if(!c){
+			if(!b){
+				this.x = randomFloat(-a,a);
+				this.y = randomFloat(-a,a);
+				return;
+			}
+			this.x = randomFloat(a,b);
+			this.y = randomFloat(a,b);
+			return;
+		}else{
+			this.x = randomFloat(a,b);
+			this.y = randomFloat(c,d);
+			return;
+		}
+	}
 });
 Object.assign(Point, {
 	add: function(){
@@ -1256,8 +1326,8 @@ Physics.Particle = function(x,y){
 	this.p = new Point(x,y);
 	this.v = new Point();
 	this.mass = 8;
-	this.timer = new Clock();
-	this.lifeTime = 0;
+	this.clock = new Clock();
+	this.lifeTime = -1;
 	this.group = null;
 	this.r = null;
 
@@ -1282,7 +1352,7 @@ Physics.Particle.prototype.draw = function(){
 Physics.Particle.prototype.update = function(){
 	if(this.group.fixed) this.v = new Point();
 	this.p.add(this.v);
-	this.timer.update()
+	this.clock.update()
 };
 Physics.Particle.prototype.copy = function(){
 	var p = new this.constructor(this.p.x,this.p.y);
@@ -1790,6 +1860,7 @@ Object.assign(SlideShow.prototype, {
 		var clock = new Clock();
 		var center = new Point(ww/2, hh/2);
 		var mouse = new Point(center);
+		var timer = new Timer();
 		var g = [
 			'space', 
 			'ww', 
@@ -1797,8 +1868,9 @@ Object.assign(SlideShow.prototype, {
 			'tool', 
 			'clock', 
 			'world', 
-			'center',
-			'mouse',
+			'center', 
+			'mouse', 
+			'timer',
 		];
 		for(var i=0;i<g.length;i++){
 			global[g[i]] = eval(g[i]);
