@@ -11,15 +11,17 @@
 <script src="./libs/Cells.js"></script>
 <script type="text/javascript">
 	initSpace();
+	pauseButton();
 	var b = new Body(tool);
 	var c = new Cell(500,400);
-	c.isDead = true;
+	c.r = 5;
 	b.addCell(c);
 	function run(){
 		background(0,0,0);
 		b.run();
-		clock.update();
 		timer.update();
+		clock.update();
+		b.pause = pause;
 		setTimeout(run, 5);
 	}
 	run();

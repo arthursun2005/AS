@@ -89,21 +89,21 @@ Array.prototype._sort = function(changeObj){
 	}
 	return {all: all, minP: minP, maxD: maxD, arr: arr, p: p};
 };
-Array._sortLoop = function(f, obj, timesRadius = 2){
+Array._sortLoop = function(f, obj, times = 3){
 	var all = obj.all, minP = obj.minP, maxD = obj.maxD, arr = obj.arr, p = obj.p;
-	timesRadius = Math.round(timesRadius);
-	if(timesRadius%2 == 0){
+	times = Math.round(times);
+	if(times%2 == 0){
 		// is even
-		var a = timesRadius/2-1;
-		var b = timesRadius/2;
+		var a = times/2-1;
+		var b = times/2;
 	}else{
 		// is odd
-		var a = Math.floor(timesRadius/2);
+		var a = Math.floor(times/2);
 		var b = a;
 	}
 	for (var i = arr.length - 1; i >= 0; i--) {
 		var c = arr[i];
-		if(timesRadius%2 == 0){
+		if(times%2 == 0){
 			var y = Math.floor((c[p].y-minP.y-maxD/2)/maxD);
 			var x = Math.floor((c[p].x-minP.x-maxD/2)/maxD);
 		}else{
@@ -114,7 +114,7 @@ Array._sortLoop = function(f, obj, timesRadius = 2){
 			if(!all[py]) continue;
 			for(var px=x-a;px<=x+b;px++){
 				if(!all[py][px]) continue;
-				if(!(y<py && x<px)) continue;
+				if(y>py && x>px) continue;
 				for (var j = all[py][px].length - 1; j >= 0; j--) {
 					var j0 = all[py][px][j];
 					if(i == j0.id) continue;
@@ -161,6 +161,12 @@ function primeFactor(n){
 		}
 	}
 	return factors;
+}
+Math.roundToZero = function(n){
+	return n>0 ? this.floor(n) : this.ceil(n); 
+}
+Math.roundAwayZero = function(n){
+	return n>0 ? this.ceil(n) : this.floor(n);
 }
 Math.isInt = function(n){return (this.round(Number(n)) == Number(n));};
 Math.change = function(num,a,b){
@@ -214,11 +220,10 @@ function mixColors(a, b, k){
 		b: o2.b-o1.b, 
 		a: o2.a-o1.a, 
 	};
-	o1.r+=Math.floor(diff.r*k), o1.g+=Math.floor(diff.g*k), o1.b+=Math.floor(diff.b*k), o1.a+=Math.floor(diff.a*k);
-	o2.r-=Math.floor(diff.r*k), o2.g-=Math.floor(diff.g*k), o2.b-=Math.floor(diff.b*k), o2.a-=Math.floor(diff.a*k);
+	o1.r+=Math.roundAwayZero(diff.r*k), o1.g+=Math.roundAwayZero(diff.g*k), o1.b+=Math.roundAwayZero(diff.b*k), o1.a+=Math.roundAwayZero(diff.a*k);
+	o2.r-=Math.roundAwayZero(diff.r*k), o2.g-=Math.roundAwayZero(diff.g*k), o2.b-=Math.roundAwayZero(diff.b*k), o2.a-=Math.roundAwayZero(diff.a*k);
 	a3 = toHexColor(o1.r,o1.g,o1.b,o1.a);
 	b3 = toHexColor(o2.r,o2.g,o2.b,o2.a);
-	console.log(a3);
 	return {a:a3,b:b3};
 }
 function hexToNumber(str){
@@ -295,7 +300,7 @@ Timer.prototype = {
 	},
 	_c: function(a,b){
 		if(this[a]) this[a].d = b;
-		else this[a] = {t: 0, d: b};
+		else this[a] = {t: 1, d: b};
 	},
 	is: function(a){
 		return this[a].t == 0;
@@ -1884,6 +1889,16 @@ Object.assign(SlideShow.prototype, {
 		tool.noStroke();
 		tool.fill(255,144,0);
 		tool.ellipse(mouse.x,mouse.y,2.5,2.5);
+	};
+	global.pauseButton = function(varName = 'pause'){
+		global[varName] = false;
+		var butt = document.createElement('button');
+		butt.onclick = function(e){
+			global[varName] = !global[varName];
+		};
+		butt.innerHTML = 'Pause';
+		butt.style.textAlign = 'center';
+		document.body.appendChild(butt);
 	};
 	global.background = function(a,b,c,d){
 		tool.noStroke();

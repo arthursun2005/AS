@@ -16,7 +16,7 @@
 		'isProtein': false, 
 		'isBacteria': false, 
 		'isVirus': false, 
-		'lifeTime': 120, 
+		'lifeTime': -1, 
 	};
 	function DNA(info){
 		this.set(info);
@@ -57,9 +57,9 @@
 		this.r = r || 27;
 		if(_DNA) this.DNA = _DNA.clone();
 		else this.DNA = new DNA();
-		this.c = {r: 220, g: 120, b: 60, a: 255};
+		this.c = {r: 180, g: 120, b: 40, a: 255};
 		this.clock = new Clock();
-		this.timer = new Timer(); 
+		this.timer = new Timer('a',500); 
 		this.isDead = false;
 		this.innerColor = undefined;
 		this.activated = false;
@@ -69,11 +69,11 @@
 		this.energy = this.m;
 	}
 	Object.assign(Cell.prototype, {
-		duplicate: function(){
+		split: function(){
 			var newCell = this.clone();
-			console.log(newCell.v);
-			newCell.v = new Point();
-			newCell.v.random(this.v.mag());
+			newCell.v = Point.polar(this.v.mag(), randomFloat(0,2*Math.PI));
+			this.energy/=2;
+			newCell.energy = this.energy;
 			return newCell;
 		},
 		clone: function(){
@@ -81,7 +81,11 @@
 			cell.v = this.v.copy();
 			cell.clock = new Clock(); // track new time
 			cell.health = this.health;
-			cell.isDead = this.isDead;
+			cell.energy = this.energy;
+			cell.innerColor = this.innerColor;
+			cell.activated = this.activated;
+			cell.active = this.active;
+			cell.innerColor = this.innerColor;
 			return cell;
 		}
 	});
@@ -93,6 +97,7 @@
 			console.warn('No tool in Body');
 		}
 		this.cells = [];
+		this.pause = false;
 	}
 	Object.assign(Body.prototype, {
 		draw: function(tool){
@@ -109,7 +114,7 @@
 			for(var i=0;i<this.cells.length;i++){
 				var cell = this.cells[i];
 				var r = cell.r/3*1.8;
-				tool.fill(cell.c.r+20, cell.c.b+20, cell.c.b+20, cell.c.a);
+				tool.fill(cell.c.r+30, cell.c.b+30, cell.c.b+30, cell.c.a);
 				if(cell.innerColor) tool.fill(cell.innerColor);
 				tool.translate(cell.p);
 				tool.ellipse(0,0,r,r);
@@ -125,13 +130,14 @@
 				var m = d.mag(), a = d.angle();
 				if(d.isZero()) a = randomFloat(0,2*Math.PI);
 				if(m<D){
-					var force = (1-m/D)*(obj1.m+obj2.m)/3e2+Math.pow(obj1.v.mag()+obj2.v.mag(), 2)*Math.PI*2;
+					var force = 10*(1-m/D)*(1-m/D)*(obj1.m+obj2.m)/50;
+					var mf = (obj1.m+obj2.m)/40; if(force>mf) force = mf;
 					var pp = Point.polar(force, a);
-					var index = 30;
+					var index = 10;
 					obj1.v.scale(Math.pow(m/D, 1/index));
 					obj2.v.scale(Math.pow(m/D, 1/index));
-					obj1.v.sub(pp.scale0(1/obj2.m));
-					obj2.v.add(pp.scale0(1/obj1.m));
+					obj1.v.sub(pp.scale0(2/obj1.m));
+					obj2.v.add(pp.scale0(2/obj2.m));
 					//
 				}
 			}
@@ -141,11 +147,15 @@
 		update: function(){
 			for (var i = this.cells.length - 1; i >= 0; i--) {
 				var c = this.cells[i];
-				if(c.clock.time>c.DNA.lifeTime) c.isDead = true;
+				if(c.clock.time>c.DNA.lifeTime && c.DNA.lifeTime != -1) c.isDead = true;
 				c.m = c.r*c.r;
 				c.v.scale(c.m/(c.m+Math.PI*2));
 				c.p.add(c.v);
 				c.clock.update();
+				c.timer.update();
+				if(c.timer.is('a')){
+					this.addCell(c.split());
+				}
 				if(c.isDead){
 					var str = toHexColor(c.c.r, c.c.g, c.c.b, c.c.a);
 					str = mixColors(str, '#777777ff', 1/150).a;
@@ -159,8 +169,10 @@
 			else this.cells.push(new Cell(a,b,c,d));
 		},
 		run: function(tool){
-			this.solve();
-			this.update();
+			if(!this.pause){
+				this.solve();
+				this.update();
+			}
 			this.draw(tool);
 		}
 	});
