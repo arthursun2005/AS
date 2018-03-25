@@ -13,9 +13,15 @@
 	initSpace();
 	pauseButton();
 	var b = new Body(tool);
-	var c = new Cell(500,400);
-	c.r = 5;
-	b.addCell(c);
+	b.addCell(500,400);
+	space.onmousedown = function(){
+		var c = new Cell(mouse);
+		b.addCell(c);
+	};
+	space.ontouchstart = function(){
+		var c = new Cell(mouse);
+		b.addCell(c);
+	};
 	function run(){
 		background(0,0,0);
 		b.run();

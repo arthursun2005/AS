@@ -8,15 +8,13 @@
 	**/
 	const defaultDNAValues = {
 		'type': 'bloodCell',
-		'speed': 1, 
-		'endurance': 10, 
-		'energyNeeded': Eq('x'), 
+		'efficiency': 0.7, // max 1
 		'isCancer': false, 
 		'isCell': true, 
 		'isProtein': false, 
 		'isBacteria': false, 
 		'isVirus': false, 
-		'lifeTime': -1, 
+		'lifeTime': 16000, 
 	};
 	function DNA(info){
 		this.set(info);
@@ -28,19 +26,14 @@
 				this[key] = obj[key];
 			}
 		}else{
-			if(info instanceof DNA){
-				for(var key in info){
-					this[key] = info[key];
-				}
-			}else{
-				for(var key in defaultDNAValues){
-					if(key in info) this[key] = info[key];
-					else this[key] = defaultDNAValues[key];
-				}
+			for(var key in defaultDNAValues){
+				if(key in info) this[key] = info[key];
+				else this[key] = defaultDNAValues[key];
 			}
 		}
 	};
-	DNA.prototype.clone = function(info) {
+	DNA.prototype._clone = function() {
+		console.log('ran');
 		return new DNA(this);
 	};
 	/**
@@ -48,37 +41,83 @@
 	**/
 	function Cell(x,y,r,_DNA){
 		if(x instanceof Point){
-			r = y, _DNA = r;
-			var _x = x.copy();
-			x = _x.x, y = _x.y;
+			 _DNA = r, r = y;
+			this.p = x.copy();
+		}else{
+			this.p = new Point(x,y);
 		}
-		this.p = new Point(x,y);
 		this.v = new Point();
+		this.fv = new Point();
 		this.r = r || 27;
-		if(_DNA) this.DNA = _DNA.clone();
+		this.initR = this.r;
+		if(_DNA) this.DNA = _DNA._clone();
 		else this.DNA = new DNA();
-		this.c = {r: 180, g: 120, b: 40, a: 255};
+		this.c = {r: 220, g: 180, b: 0, a: 255};
 		this.clock = new Clock();
-		this.timer = new Timer('a',500); 
+		this.timer = new Timer('d',600);
 		this.isDead = false;
-		this.innerColor = undefined;
 		this.activated = false;
 		this.active = true;
+		this.gone = false;
 		this.m = this.r*this.r;
 		this.health = this.m;
-		this.energy = this.m;
+		this.speed = 0;
 	}
 	Object.assign(Cell.prototype, {
+		join: function(cell){
+			this.r = Math.sqrt(this.m+cell.m);
+			cell.gone = true;
+		},
+		eat: function(cell){
+			var power = this.m/200;
+			if(cell.m-power<0){
+				cell.gone = true;
+			}else{
+				this.r = Math.sqrt(this.m+power);
+				cell.r = Math.sqrt(cell.m-power);
+			}
+		},
+		damage: function(cell){
+		},
+		fire: function(angle, r, v, f){
+			if(this.m<r*r){
+				this.gone = true;
+				var c = new Cell();
+				c.gone = true;
+				return c;
+			}
+			this.r = Math.sqrt(this.m-r*r);
+			var newCell = new Cell(Point.polar(this.r+r*2,angle).add(this.p),r);
+			newCell.v = Point.polar(v,angle);
+			if(f) f(newCell);
+			return newCell;
+		},
+		go: function(angle){
+			this.v.add(Point.polar(this.speed,angle));
+		},
+		disintegrate: function(){
+			var a = randomFloat(0,2*Math.PI);
+			var r = randomFloat(3,5);
+			var v = randomFloat(this.r/4,this.r/2);
+			function f(c){
+				var dna = new DNA({isCell: false, isProtein: true, type: 'bodyCell'});
+				c.DNA = dna;
+				c.c = {r: 255, g: 255, b: 0, a: 255};
+			}
+			var newCell = this.fire(a,r,v,f);
+			return newCell;
+		},
 		split: function(){
+			this.r = Math.sqrt(this.m/2);
 			var newCell = this.clone();
 			newCell.v = Point.polar(this.v.mag(), randomFloat(0,2*Math.PI));
-			this.energy/=2;
-			newCell.energy = this.energy;
+			newCell.r = this.r;
 			return newCell;
 		},
 		clone: function(){
 			var cell = new this.constructor(this.p,this.r,this.DNA);
 			cell.v = this.v.copy();
+			cell.initR = this.initR;
 			cell.clock = new Clock(); // track new time
 			cell.health = this.health;
 			cell.energy = this.energy;
@@ -89,7 +128,7 @@
 			return cell;
 		}
 	});
-	const types = ['healer','communicator', 'guard', 'ebola', 'antibody', 'attack', 'bcell', 'bloodCell', 'whiteCell', 'bodyCell'];
+	const types = ['healer','communicator', 'guard', 'ebola', 'antibody', 'attack', 'bcell', 'bloodCell', 'whiteCell', 'bodyCell', 'killer'];
 	function Body(tool){
 		if(tool) this.tool = tool;
 		else{
@@ -98,15 +137,19 @@
 		}
 		this.cells = [];
 		this.pause = false;
+		this.m = new Point();
+		this.s = 1;
 	}
 	Object.assign(Body.prototype, {
 		draw: function(tool){
 			tool = tool || this.tool;
 			tool.noStroke();
+			tool.translate(this.m);
+			tool.scale(this.s);
 			for(var i=0;i<this.cells.length;i++){
 				var cell = this.cells[i];
 				var r = cell.r;
-				tool.fill(cell.c.r, cell.c.b, cell.c.b, cell.c.a);
+				tool.fill(cell.c.r, cell.c.g, cell.c.b, cell.c.a);
 				tool.translate(cell.p);
 				tool.ellipse(0,0,r,r);
 				tool.translate(cell.p.minus());
@@ -114,31 +157,69 @@
 			for(var i=0;i<this.cells.length;i++){
 				var cell = this.cells[i];
 				var r = cell.r/3*1.8;
-				tool.fill(cell.c.r+30, cell.c.b+30, cell.c.b+30, cell.c.a);
-				if(cell.innerColor) tool.fill(cell.innerColor);
+				tool.fill(cell.c.r+20, cell.c.g+20, cell.c.b+20, cell.c.a);
+				if(cell.c.r+cell.c.g+cell.c.b>200*2) tool.fill(cell.c.r-20, cell.c.g-20, cell.c.b-20, cell.c.a);
 				tool.translate(cell.p);
 				tool.ellipse(0,0,r,r);
 				tool.translate(cell.p.minus());
 			}
+			tool.scale(1/this.s);
+			tool.translate(this.m.minus());
 		},
 		solve: function(){
 			function solve(data){
+				const tt = 50;
 				var obj1 = data.obj1, obj2 = data.obj2;
 				var id1 = data.id1, id2 = data.id2;
 				var D = obj1.r+obj2.r;
 				var d = Point.sub(obj2.p, obj1.p);
 				var m = d.mag(), a = d.angle();
 				if(d.isZero()) a = randomFloat(0,2*Math.PI);
-				if(m<D){
-					var force = 10*(1-m/D)*(1-m/D)*(obj1.m+obj2.m)/50;
-					var mf = (obj1.m+obj2.m)/40; if(force>mf) force = mf;
-					var pp = Point.polar(force, a);
-					var index = 10;
-					obj1.v.scale(Math.pow(m/D, 1/index));
-					obj2.v.scale(Math.pow(m/D, 1/index));
-					obj1.v.sub(pp.scale0(2/obj1.m));
-					obj2.v.add(pp.scale0(2/obj2.m));
-					//
+				if(obj1.gone == false && obj2.gone == false){
+					function repel(){
+						var force = (1-m/D)*(1-m/D)*(obj1.m+obj2.m)/5;
+						var mf = (obj1.m+obj2.m)/45; if(force>mf) force = mf;
+						var pp = Point.polar(force, a);
+						var index = 10;
+						obj1.v.scale(Math.pow(m/D, 1/index));
+						obj2.v.scale(Math.pow(m/D, 1/index));
+						obj1.v.sub(pp.scale0(2/obj1.m));
+						obj2.v.add(pp.scale0(2/obj2.m));
+					}
+					function attract(){
+						var force = (m/D)*(m/D)*(obj1.m+obj2.m)/2000;
+						var mf = (obj1.m+obj2.m)/3000; if(force>mf) force = mf;
+						var pp = Point.polar(force, a+Math.PI);
+						obj1.v.sub(pp.scale0(2/obj1.m));
+						obj2.v.add(pp.scale0(2/obj2.m));
+					}
+					var reach = Math.sqrt(D)*12;
+					if(obj1.clock.time>tt && obj2.clock.time>tt && m<D+reach && ((obj1.DNA.isCell && obj2.DNA.isProtein && !obj1.isDead) || (obj2.DNA.isCell && obj1.DNA.isProtein && !obj2.isDead))){
+						attract();
+					}else if(obj1.clock.time>tt && obj2.clock.time>tt && ((!obj1.isDead && obj2.isDead && obj1.DNA.isCell) || (obj1.isDead && !obj2.isDead && obj2.DNA.isCell))){
+						attract();
+					}
+					if(m<D){
+						repel();
+						var mr = 6;
+						if(!obj1.isDead && !obj2.isDead && obj1.DNA.isProtein && obj2.DNA.isProtein && obj1.DNA.type == obj2.DNA.type && obj1.r<mr && obj2.r<mr){
+							obj1.join(obj2);
+						}
+						if(!obj1.isDead && obj1.DNA.isCell && obj2.DNA.isProtein && obj2.clock.time>tt){
+							if(obj2.DNA.isVirus && !obj2.isDead) obj2.damage(obj1);
+							else obj1.eat(obj2);
+						}
+						if(!obj2.isDead && obj2.DNA.isCell && obj1.DNA.isProtein && obj1.clock.time>tt){
+							if(obj1.DNA.isVirus && !obj1.isDead) obj1.damage(obj2);
+							else obj2.eat(obj1);
+						}
+						if(!obj1.isDead && obj2.isDead && obj1.DNA.isCell){
+							obj1.eat(obj2);
+						}
+						if(obj1.isDead && !obj2.isDead && obj2.DNA.isCell){
+							obj2.eat(obj1);
+						}
+					}
 				}
 			}
 			var sorted = this.cells._sort();
@@ -147,13 +228,26 @@
 		update: function(){
 			for (var i = this.cells.length - 1; i >= 0; i--) {
 				var c = this.cells[i];
+				if(c.gone){
+					this.cells.splice(i,1);
+					continue;
+				}
 				if(c.clock.time>c.DNA.lifeTime && c.DNA.lifeTime != -1) c.isDead = true;
 				c.m = c.r*c.r;
-				c.v.scale(c.m/(c.m+Math.PI*2));
+				c.speed = Math.sqrt(c.r)/100;
+				c.fv.add(Point.random(1/(c.v.mag()+1)/220).scale(1/c.m));
+				c.v.add(c.fv);
+				c.v.scale(c.m/(c.m+Math.PI));
 				c.p.add(c.v);
 				c.clock.update();
 				c.timer.update();
-				if(c.timer.is('a')){
+				if((c.timer.is('d') || c.isDead) && c.DNA.isCell){
+					var ii = Math.floor(c.m*1/450);
+					for(var j=0;j<ii;j++){
+						this.addCell(c.disintegrate());
+					}
+				}
+				if(c.m>c.initR*c.initR*2 && c.DNA.isCell){
 					this.addCell(c.split());
 				}
 				if(c.isDead){

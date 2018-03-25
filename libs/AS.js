@@ -458,8 +458,13 @@ Object.assign(Point.prototype, {
 		return this.x == 0 && this.y == 0;
 	},
 	random: function(a,b,c,d){
-		if(!c){
-			if(!b){
+		if(c == undefined){
+			if(a == undefined){
+				this.x = randomFloat(-1,1);
+				this.y = randomFloat(-1,1);
+				return;
+			}
+			if(b == undefined){
 				this.x = randomFloat(-a,a);
 				this.y = randomFloat(-a,a);
 				return;
@@ -470,6 +475,28 @@ Object.assign(Point.prototype, {
 		}else{
 			this.x = randomFloat(a,b);
 			this.y = randomFloat(c,d);
+			return;
+		}
+	},
+	constrain: function(a,b,c,d){
+		if(c == undefined){
+			if(a == undefined){
+				this.x = constrain(this.x,-1,1);
+				this.y = constrain(this.y,-1,1);
+				return;
+			}
+			if(b == undefined){
+				a = Math.abs(a);
+				var n = this.normalized().scale(a);
+				if(this.mag()>a) this.x = n.x, this.y = n.y;
+				return;
+			}
+			this.x = constrain(this.x,a,b);
+			this.y = constrain(this.y,a,b);
+			return;
+		}else{
+			this.x = constrain(this.x,a,b);
+			this.y = constrain(this.y,c,d);
 			return;
 		}
 	}
@@ -529,6 +556,11 @@ Object.assign(Point, {
 	},
 	polar: function(r,a){
 		return new Point(Math.cos(a)*r,Math.sin(a)*r);
+	},
+	random: function(a,b,c,d){
+		var p = new Point();
+		p.random(a,b,c,d);
+		return p;
 	}
 });
 function Draw(space){
