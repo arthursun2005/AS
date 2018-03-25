@@ -14,7 +14,7 @@
 		'isProtein': false, 
 		'isBacteria': false, 
 		'isVirus': false, 
-		'lifeTime': 16000, 
+		'lifeTime': 30000, 
 	};
 	function DNA(info){
 		this.set(info);
@@ -33,7 +33,6 @@
 		}
 	};
 	DNA.prototype._clone = function() {
-		console.log('ran');
 		return new DNA(this);
 	};
 	/**
@@ -54,7 +53,7 @@
 		else this.DNA = new DNA();
 		this.c = {r: 220, g: 180, b: 0, a: 255};
 		this.clock = new Clock();
-		this.timer = new Timer('d',600);
+		this.timer = new Timer('d',200);
 		this.isDead = false;
 		this.activated = false;
 		this.active = true;
@@ -78,6 +77,8 @@
 			}
 		},
 		damage: function(cell){
+			cell.eat(this);
+			cell.health-=this.m/100;
 		},
 		fire: function(angle, r, v, f){
 			if(this.m<r*r){
@@ -97,7 +98,7 @@
 		},
 		disintegrate: function(){
 			var a = randomFloat(0,2*Math.PI);
-			var r = randomFloat(3,5);
+			var r = randomFloat(4,6);
 			var v = randomFloat(this.r/4,this.r/2);
 			function f(c){
 				var dna = new DNA({isCell: false, isProtein: true, type: 'bodyCell'});
@@ -137,34 +138,34 @@
 		}
 		this.cells = [];
 		this.pause = false;
+		this.lastPauseMode = false;
 		this.m = new Point();
+		this.center = new Point();
 		this.s = 1;
 	}
 	Object.assign(Body.prototype, {
 		draw: function(tool){
 			tool = tool || this.tool;
 			tool.noStroke();
-			tool.translate(this.m);
+			tool.translate(this.center);
 			tool.scale(this.s);
+			tool.translate(this.m);
 			for(var i=0;i<this.cells.length;i++){
 				var cell = this.cells[i];
 				var r = cell.r;
 				tool.fill(cell.c.r, cell.c.g, cell.c.b, cell.c.a);
-				tool.translate(cell.p);
-				tool.ellipse(0,0,r,r);
-				tool.translate(cell.p.minus());
+				tool.ellipse(cell.p.x,cell.p.y,r,r);
 			}
 			for(var i=0;i<this.cells.length;i++){
 				var cell = this.cells[i];
-				var r = cell.r/3*1.8;
-				tool.fill(cell.c.r+20, cell.c.g+20, cell.c.b+20, cell.c.a);
-				if(cell.c.r+cell.c.g+cell.c.b>200*2) tool.fill(cell.c.r-20, cell.c.g-20, cell.c.b-20, cell.c.a);
-				tool.translate(cell.p);
-				tool.ellipse(0,0,r,r);
-				tool.translate(cell.p.minus());
+				var r = cell.r/3*1.8, _g = 40;
+				tool.fill(cell.c.r+_g, cell.c.g+_g, cell.c.b+_g, cell.c.a);
+				if(cell.c.r+cell.c.g+cell.c.b>200*2) tool.fill(cell.c.r-_g, cell.c.g-_g, cell.c.b-_g, cell.c.a);
+				tool.ellipse(cell.p.x,cell.p.y,r,r);
 			}
-			tool.scale(1/this.s);
 			tool.translate(this.m.minus());
+			tool.scale(1/this.s);
+			tool.translate(this.center.minus());
 		},
 		solve: function(){
 			function solve(data){
@@ -198,6 +199,12 @@
 						attract();
 					}else if(obj1.clock.time>tt && obj2.clock.time>tt && ((!obj1.isDead && obj2.isDead && obj1.DNA.isCell) || (obj1.isDead && !obj2.isDead && obj2.DNA.isCell))){
 						attract();
+					}
+					if(!obj1.isDead && obj2.isDead && obj1.DNA.isCell && obj2.r>obj1.r/2){
+						obj1.go(a+Math.PI);
+					}
+					if(obj1.isDead && !obj2.isDead && obj2.DNA.isCell && obj1.r>obj2.r/2){
+						obj2.go(a+Math.PI);
 					}
 					if(m<D){
 						repel();
@@ -239,10 +246,10 @@
 				c.v.add(c.fv);
 				c.v.scale(c.m/(c.m+Math.PI));
 				c.p.add(c.v);
-				c.clock.update();
 				c.timer.update();
-				if((c.timer.is('d') || c.isDead) && c.DNA.isCell){
-					var ii = Math.floor(c.m*1/450);
+				if((c.timer.is('d') || c.isDead) && c.DNA.isCell && (c.r>c.initR || c.isDead)){
+					var ii = Math.floor(c.m*1/500);
+					if(c.isDead) c.disintegrate();
 					for(var j=0;j<ii;j++){
 						this.addCell(c.disintegrate());
 					}
@@ -267,6 +274,15 @@
 				this.solve();
 				this.update();
 			}
+			for (var i = this.cells.length - 1; i >= 0; i--) {
+				this.cells[i].clock.update();
+			}
+			if(this.pause != this.lastPauseMode){
+				for (var i = this.cells.length - 1; i >= 0; i--) {
+					this.cells[i].clock.running = !this.pause;
+				}
+			}
+			this.lastPauseMode = this.pause;
 			this.draw(tool);
 		}
 	});

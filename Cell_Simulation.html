@@ -12,14 +12,16 @@
 <script type="text/javascript">
 	initSpace();
 	pauseButton();
+	key();
 	var b = new Body(tool);
-	b.addCell(500,400);
-	space.onmousedown = function(){
-		var c = new Cell(mouse);
-		b.addCell(c);
-	};
-	space.ontouchstart = function(){
-		var c = new Cell(mouse);
+	b.addCell(0,0);
+	b.center = center.copy();
+	var _ff = undefined;
+	space.onmousedown = function(e){
+		var x = (e.offsetX-b.center.x-b.m.x)/b.s;
+		var y = (e.offsetY-b.center.y-b.m.y)/b.s;
+		var c = new Cell(x,y);
+		if(_ff) _ff(c);
 		b.addCell(c);
 	};
 	function run(){
@@ -27,6 +29,16 @@
 		b.run();
 		timer.update();
 		clock.update();
+		if(keys.p) pause = true;
+		if(keys.c) pause = false;
+		if(keys.z) b.s*=1.005;
+		if(keys.x) b.s/=1.005;
+		if(keys.ArrowUp) b.m.y+=2.2;
+		if(keys.ArrowDown) b.m.y-=2.2;
+		if(keys.ArrowLeft) b.m.x+=2.2;
+		if(keys.ArrowRight) b.m.x-=2.2;
+		b.center.x = (b.m.x)*b.s+center.x;
+		b.center.y = (b.m.y)*b.s+center.y;
 		b.pause = pause;
 		setTimeout(run, 5);
 	}

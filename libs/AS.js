@@ -265,7 +265,7 @@ Object.assign(Clock.prototype, {
 	reset: function(){
 		this.set(Date.now());
 	},
-	clone: function(){
+	_clone: function(){
 		var clock = new Clock();
 		clock.time = this.time, 
 		clock.lastRecordTime = this.lastRecordTime, 
@@ -1937,5 +1937,16 @@ Object.assign(SlideShow.prototype, {
 		tool.fill(a,b,c,d);
 		tool.rectMode('');
 		tool.rect(0,0,ww,hh);
-	}
+	};
+	global.key = function(){
+		global.keys = {};
+		function f1(e){
+			keys[e.key] = true;
+		}
+		function f2(e){
+			keys[e.key] = false;
+		}
+		window.addEventListener('keydown', f1, false);
+		window.addEventListener('keyup', f2, false);
+	};
 })(this);
