@@ -61,6 +61,7 @@ Object.prototype.clone = function(){
 Array.prototype._sort = function(changeObj){
 	// using my method to decrease time complexity
 	var arr = this;
+	if(arr.length<1) return null;
 	var r = 'r', p = 'p';
 	for(var key in changeObj){
 		switch(key){
@@ -90,6 +91,7 @@ Array.prototype._sort = function(changeObj){
 	return {all: all, minP: minP, maxD: maxD, arr: arr, p: p};
 };
 Array._sortLoop = function(f, obj, times = 3){
+	if(!obj) return false;
 	var all = obj.all, minP = obj.minP, maxD = obj.maxD, arr = obj.arr, p = obj.p;
 	times = Math.round(times);
 	if(times%2 == 0){
@@ -575,11 +577,7 @@ function Draw(space){
 	this._font = "monospace";
 	this._textAlign = "center";
 
-	this.mx = 0;
-	this.my = 0;
-	this.a = 0;
-	this.sx = 1;
-	this.sy = 1;
+	this.tas = [];
 	this.rectAlign = "corner";
 	this.d = this.space.getContext("2d");
 	this.d0 = this.space.getContext("2d");
@@ -663,49 +661,87 @@ Object.assign(Draw.prototype, {
 		}
 	},
 	translate: function(x,y){
-		if(!y){
-			try{
-				this.mx+=x.x;
-				this.my+=x.y;
-			}catch(e){
-				throw e;
-			}
+		if(!y && x instanceof Point){
+			var _x = x.x;
+			var _y = x.y;
 		}else{
-			this.mx+=x;
-			this.my+=y;
+			var _x = x, _y = y;
 		}
+		var obj = {type: 'translate', x: _x, y: _y};
+		var o1 = this.tas[this.tas.length-1];
+		if(o1 && o1.type == 'translate' && o1.x == obj.x && o1.y == obj.y){
+			this.tas.splice(this.tas.length-1, 1);
+			return;
+		}
+		this.tas.push(obj);
 	},
 	rotate: function(a){
-		this.a+=a;
-	},
-	scale: function(sx,sy){
-		if(!sy){
-			this.sx*=sx;
-			this.sy*=sx;
-			return
+		var obj = {type: 'rotate', a: a};
+		var o1 = this.tas[this.tas.length-1];
+		if(o1 && o1.type == 'rotate' && o1.a == obj.a){
+			this.tas.splice(this.tas.length-1, 1);
+			return;
 		}
-		this.sx*=sx;
-		this.sy*=sy;
+		this.tas.push(obj);
+	},
+	scale: function(x,y){
+		if(y == undefined){
+			y = x;
+		}
+		var obj = {type: 'scale', x: x, y: y};
+		var o1 = this.tas[this.tas.length-1];
+		if(o1 && o1.type == 'scale' && o1.x == obj.x && o1.y == obj.y){
+			this.tas.splice(this.tas.length-1, 1);
+			return;
+		}
+		this.tas.push(obj);
+	},
+	pop: function(){
+		this.tas = [];
 	},
 	s0: function(){
-		this.d.translate(this.mx,this.my);
-		this.d.rotate(this.a);
-		this.d.scale(this.sx,this.sy);
+		for(var i=0;i<this.tas.length;i++){
+			if(this.tas[i].type == 'translate'){
+				this.d.translate(this.tas[i].x, this.tas[i].y);
+			}else if(this.tas[i].type == 'rotate'){
+				this.d.rotate(this.tas[i].a);
+			}else if(this.tas[i].type == 'scale'){
+				this.d.scale(this.tas[i].x, this.tas[i].y);
+			}
+		}
 	},
 	f0: function(){
-		this.d.scale(1/this.sx,1/this.sy);
-		this.d.rotate(-this.a);
-		this.d.translate(-this.mx,-this.my);
+		for(var i=this.tas.length-1;i>=0;i--){
+			if(this.tas[i].type == 'translate'){
+				this.d.translate(-this.tas[i].x, -this.tas[i].y);
+			}else if(this.tas[i].type == 'rotate'){
+				this.d.rotate(-this.tas.a);
+			}else if(this.tas[i].type == 'scale'){
+				this.d.scale(1/this.tas[i].x, 1/this.tas[i].y);
+			}
+		}
 	},
 	s1: function(){
-		this.d0.translate(this.mx,this.my);
-		this.d0.rotate(this.a);
-		this.d0.scale(this.sx,this.sy);
+		for(var i=this.tas.length-1;i>=0;i--){
+			if(this.tas[i].type == 'translate'){
+				this.d0.translate(-this.tas[i].x, -this.tas[i].y);
+			}else if(this.tas[i].type == 'rotate'){
+				this.d0.rotate(-this.tas.a);
+			}else if(this.tas[i].type == 'scale'){
+				this.d0.scale(1/this.tas[i].x, 1/this.tas[i].y);
+			}
+		}
 	},
 	f1: function(){
-		this.d0.scale(1/this.sx,1/this.sy);
-		this.d0.rotate(-this.a);
-		this.d0.translate(-this.mx,-this.my);
+		for(var i=this.tas.length-1;i>=0;i--){
+			if(this.tas[i].type == 'translate'){
+				this.d0.translate(-this.tas[i].x, -this.tas[i].y);
+			}else if(this.tas[i].type == 'rotate'){
+				this.d0.rotate(-this.tas.a);
+			}else if(this.tas[i].type == 'scale'){
+				this.d0.scale(1/this.tas[i].x, 1/this.tas[i].y);
+			}
+		}
 	},
 	reset: function(){
 		this.mx = 0;
@@ -733,41 +769,41 @@ Object.assign(Draw.prototype, {
 		if(!r){
 			if(!this._fill && this._stroke){
 				this.d.beginPath();
-				if(this.rectAlign == "center") this.d.translate(-w/2,-h/2);
 				this.s0();
 				this.d.strokeStyle = this.strokeColor;
+				if(this.rectAlign == "center") this.d.translate(-w/2,-h/2);
 				this.d.rect(x,y,w,h);
+				if(this.rectAlign == "center") this.d.translate(w/2,h/2);
 				this.d.stroke();
 				this.f0();
-				if(this.rectAlign == "center") this.d.translate(w/2,h/2);
 			}
 			if(!this._stroke && this._fill){
 				this.d.beginPath();
-				if(this.rectAlign == "center") this.d.translate(-w/2,-h/2);
 				this.s0();
+				if(this.rectAlign == "center") this.d.translate(-w/2,-h/2);
 				this.d.fillStyle = this.fillColor;
 				this.d.fillRect(x,y,w,h);
 				this.d.stroke();
-				this.f0();
 				if(this.rectAlign == "center") this.d.translate(w/2,h/2);
+				this.f0();
 			}
 			if(this._stroke && this._fill){
 				this.d.beginPath();
-				if(this.rectAlign == "center") this.d.translate(-w/2,-h/2);
 				this.s0();
+				if(this.rectAlign == "center") this.d.translate(-w/2,-h/2);
 				this.d.fillStyle = this.fillColor;
 				this.d.strokeStyle = this.strokeColor;
 				this.d.rect(x,y,w,h);
 				this.d.fillRect(x,y,w,h);
 				this.d.stroke();
 				this.d.fill();
-				this.f0();
 				if(this.rectAlign == "center") this.d.translate(w/2,h/2);
+				this.f0();
 			}
 		}else if(r){
 			this.d.beginPath();
-			if(this.rectAlign == "center") this.d.translate(-w/2,-h/2);
 			this.s0();
+			if(this.rectAlign == "center") this.d.translate(-w/2,-h/2);
 			this.d.moveTo(x+r, y);
 			this.d.lineTo(x+w-r, y);
 			this.d.quadraticCurveTo(x+w, y, x+w, y+r);
@@ -782,13 +818,14 @@ Object.assign(Draw.prototype, {
 			this.d.strokeStyle = this.strokeColor;
 			if(this._stroke) this.d.stroke();
 			if(this._fill) this.d.fill();
-			this.f0();
 			if(this.rectAlign == "center") this.d.translate(w/2,h/2);
+			this.f0();
 		}
 	},
 	ellipse: function(x, y, w, h, a = 0, b = 2*Math.PI){
 		this.d.beginPath();
 		this.s0();
+		this.d.ellipseMode = 'center';
 		this.d.ellipse(x,y,w,h,0,a,b);
 		this.d.lineWidth = this.lineWidth;
 		this.d.fillStyle = this.fillColor;

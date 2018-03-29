@@ -14,31 +14,34 @@
 	pauseButton();
 	key();
 	var b = new Body(tool);
-	b.addCell(0,0);
 	b.center = center.copy();
 	var _ff = undefined;
-	space.onmousedown = function(e){
-		var x = (e.offsetX-b.center.x-b.m.x)/b.s;
-		var y = (e.offsetY-b.center.y-b.m.y)/b.s;
+	b.addCell();
+	function insertCell(){
+		var x = (mouse.x-b.center.x)/b.s-b.m.x;
+		var y = (mouse.y-b.center.y)/b.s-b.m.y;
 		var c = new Cell(x,y);
+		//c.isDead = true;
 		if(_ff) _ff(c);
+		c._r(200);
 		b.addCell(c);
+	}
+	space.onmousedown = function(e){
+		insertCell();
 	};
+	function _f_(e){
+		if(e.key == 'p'){
+			pause = !pause;
+		}
+	}
+	window.addEventListener('keydown', _f_, false);
 	function run(){
 		background(0,0,0);
 		b.run();
 		timer.update();
 		clock.update();
-		if(keys.p) pause = true;
-		if(keys.c) pause = false;
-		if(keys.z) b.s*=1.005;
-		if(keys.x) b.s/=1.005;
-		if(keys.ArrowUp) b.m.y+=2.2;
-		if(keys.ArrowDown) b.m.y-=2.2;
-		if(keys.ArrowLeft) b.m.x+=2.2;
-		if(keys.ArrowRight) b.m.x-=2.2;
-		b.center.x = (b.m.x)*b.s+center.x;
-		b.center.y = (b.m.y)*b.s+center.y;
+		b.controls();
+		if(keys.c) insertCell();
 		b.pause = pause;
 		setTimeout(run, 5);
 	}

@@ -14,7 +14,7 @@
 		'isProtein': false, 
 		'isBacteria': false, 
 		'isVirus': false, 
-		'lifeTime': 30000, 
+		'lifeTime': 2000, 
 	};
 	function DNA(info){
 		this.set(info);
@@ -53,41 +53,49 @@
 		else this.DNA = new DNA();
 		this.c = {r: 220, g: 180, b: 0, a: 255};
 		this.clock = new Clock();
-		this.timer = new Timer('d',200);
+		this.timer = new Timer('d',1100);
 		this.isDead = false;
 		this.activated = false;
 		this.active = true;
 		this.gone = false;
-		this.m = this.r*this.r;
-		this.health = this.m;
+		this.health = this._m();
 		this.speed = 0;
 	}
 	Object.assign(Cell.prototype, {
+		_r: function(num){
+			this.r = num;
+			this.initR = num;
+			this.health = this._m();
+		},
+		_m: function(){
+			return this.r*this.r;
+		},
 		join: function(cell){
-			this.r = Math.sqrt(this.m+cell.m);
+			this.r = Math.sqrt(this._m()+cell._m());
 			cell.gone = true;
 		},
 		eat: function(cell){
-			var power = this.m/200;
-			if(cell.m-power<0){
+			var power = this._m()/120;
+			if(cell.m-power<=0){
 				cell.gone = true;
 			}else{
-				this.r = Math.sqrt(this.m+power);
-				cell.r = Math.sqrt(cell.m-power);
+				this.r = Math.sqrt(this._m()+power);
+				cell.r = Math.sqrt(cell._m()-power);
 			}
 		},
 		damage: function(cell){
 			cell.eat(this);
-			cell.health-=this.m/100;
+			cell.health-=this._m()/120;
 		},
 		fire: function(angle, r, v, f){
-			if(this.m<r*r){
+			var m = this._m();
+			if(m<r*r){
 				this.gone = true;
 				var c = new Cell();
 				c.gone = true;
 				return c;
 			}
-			this.r = Math.sqrt(this.m-r*r);
+			this.r = Math.sqrt(m-r*r);
 			var newCell = new Cell(Point.polar(this.r+r*2,angle).add(this.p),r);
 			newCell.v = Point.polar(v,angle);
 			if(f) f(newCell);
@@ -98,7 +106,7 @@
 		},
 		disintegrate: function(){
 			var a = randomFloat(0,2*Math.PI);
-			var r = randomFloat(4,6);
+			var r = randomFloat(this.r/2.8,this.r/4.5);
 			var v = randomFloat(this.r/4,this.r/2);
 			function f(c){
 				var dna = new DNA({isCell: false, isProtein: true, type: 'bodyCell'});
@@ -109,10 +117,10 @@
 			return newCell;
 		},
 		split: function(){
-			this.r = Math.sqrt(this.m/2);
+			var m = this._m();
+			this.r = Math.sqrt(m/2);
 			var newCell = this.clone();
 			newCell.v = Point.polar(this.v.mag(), randomFloat(0,2*Math.PI));
-			newCell.r = this.r;
 			return newCell;
 		},
 		clone: function(){
@@ -141,31 +149,53 @@
 		this.lastPauseMode = false;
 		this.m = new Point();
 		this.center = new Point();
+		this.info = true;
 		this.s = 1;
 	}
 	Object.assign(Body.prototype, {
 		draw: function(tool){
 			tool = tool || this.tool;
-			tool.noStroke();
 			tool.translate(this.center);
 			tool.scale(this.s);
 			tool.translate(this.m);
 			for(var i=0;i<this.cells.length;i++){
 				var cell = this.cells[i];
 				var r = cell.r;
+				tool.noStroke();
 				tool.fill(cell.c.r, cell.c.g, cell.c.b, cell.c.a);
-				tool.ellipse(cell.p.x,cell.p.y,r,r);
+				tool.translate(cell.p);
+				tool.ellipse(0,0,r,r);
+				if(cell.DNA.isCell && this.info){
+					var _a = map(cell.timer['d'].t,0,cell.timer['d'].d,0,2*Math.PI)-Math.PI/2;
+					tool.stroke(255,0,0);
+					tool.line(0,0,Math.cos(-Math.PI/2)*r,Math.sin(-Math.PI/2)*r);
+					tool.stroke(0,0,0);
+					tool.line(0,0,Math.cos(_a)*r,Math.sin(_a)*r);
+					if(cell.DNA.lifeTime!=-1 && !cell.isDead){
+						var _a2 = map(cell.clock.time,0,cell.DNA.lifeTime,0,2*Math.PI)-Math.PI/2;
+						tool.stroke(0,255,0);
+						tool.line(0,0,Math.cos(_a2)*r,Math.sin(_a2)*r);
+					}
+				}
+				tool.translate(cell.p.minus());
 			}
 			for(var i=0;i<this.cells.length;i++){
 				var cell = this.cells[i];
 				var r = cell.r/3*1.8, _g = 40;
+				tool.noStroke();
 				tool.fill(cell.c.r+_g, cell.c.g+_g, cell.c.b+_g, cell.c.a);
+				tool.translate(cell.p);
 				if(cell.c.r+cell.c.g+cell.c.b>200*2) tool.fill(cell.c.r-_g, cell.c.g-_g, cell.c.b-_g, cell.c.a);
-				tool.ellipse(cell.p.x,cell.p.y,r,r);
+				tool.ellipse(0,0,r,r);
+				if(cell.DNA.isCell && this.info && !cell.isDead){
+					tool.fill(0,0,0);
+					tool.textSize(r/3);
+					tool.text('H: '+Math.round(cell.health),0,-r/3);
+					tool.text('S: '+(cell._m()/(cell.initR*cell.initR*2)).toFixed(2),0,r/3);
+				}
+				tool.translate(cell.p.minus());
 			}
-			tool.translate(this.m.minus());
-			tool.scale(1/this.s);
-			tool.translate(this.center.minus());
+			tool.pop();
 		},
 		solve: function(){
 			function solve(data){
@@ -175,50 +205,53 @@
 				var D = obj1.r+obj2.r;
 				var d = Point.sub(obj2.p, obj1.p);
 				var m = d.mag(), a = d.angle();
+				var m1 = obj1._m(), m2 = obj2._m();
 				if(d.isZero()) a = randomFloat(0,2*Math.PI);
 				if(obj1.gone == false && obj2.gone == false){
 					function repel(){
-						var force = (1-m/D)*(1-m/D)*(obj1.m+obj2.m)/5;
-						var mf = (obj1.m+obj2.m)/45; if(force>mf) force = mf;
+						var force = (1-m/D)*(1-m/D)*(m1+m2)/5;
+						var mf = (m1+m2)/45; if(force>mf) force = mf;
 						var pp = Point.polar(force, a);
 						var index = 10;
 						obj1.v.scale(Math.pow(m/D, 1/index));
 						obj2.v.scale(Math.pow(m/D, 1/index));
-						obj1.v.sub(pp.scale0(2/obj1.m));
-						obj2.v.add(pp.scale0(2/obj2.m));
+						obj1.v.sub(pp.scale0(2/m1));
+						obj2.v.add(pp.scale0(2/m2));
 					}
 					function attract(){
-						var force = (m/D)*(m/D)*(obj1.m+obj2.m)/2000;
-						var mf = (obj1.m+obj2.m)/3000; if(force>mf) force = mf;
+						var force = (m/D)*(m/D)*(m1+m2)/2000;
+						var mf = (m1+m2)/3000; if(force>mf) force = mf;
 						var pp = Point.polar(force, a+Math.PI);
-						obj1.v.sub(pp.scale0(2/obj1.m));
-						obj2.v.add(pp.scale0(2/obj2.m));
+						obj1.v.sub(pp.scale0(2/m1));
+						obj2.v.add(pp.scale0(2/m2));
 					}
 					var reach = Math.sqrt(D)*12;
-					if(obj1.clock.time>tt && obj2.clock.time>tt && m<D+reach && ((obj1.DNA.isCell && obj2.DNA.isProtein && !obj1.isDead) || (obj2.DNA.isCell && obj1.DNA.isProtein && !obj2.isDead))){
-						attract();
-					}else if(obj1.clock.time>tt && obj2.clock.time>tt && ((!obj1.isDead && obj2.isDead && obj1.DNA.isCell) || (obj1.isDead && !obj2.isDead && obj2.DNA.isCell))){
-						attract();
+					if(m<D+reach){
+						if(obj1.isCell && obj2.isProtein && obj2.clock.time>tt && !obj1.isDead){
+							attract();
+						}
+						if(obj2.isCell && obj1.isProtein && obj1.clock.time>tt && !obj2.isDead){
+							attract();
+						}
 					}
-					if(!obj1.isDead && obj2.isDead && obj1.DNA.isCell && obj2.r>obj1.r/2){
-						obj1.go(a+Math.PI);
+					var rs = 3.6;
+					if(m<obj1.r*13+obj2.r && !obj1.isDead && obj2.isDead && obj1.DNA.isCell && obj2.r>obj1.r/rs){
+						obj1.go(a);
 					}
-					if(obj1.isDead && !obj2.isDead && obj2.DNA.isCell && obj1.r>obj2.r/2){
+					if(m<obj2.r*13+obj1.r && obj1.isDead && !obj2.isDead && obj2.DNA.isCell && obj1.r>obj2.r/rs){
 						obj2.go(a+Math.PI);
 					}
 					if(m<D){
 						repel();
-						var mr = 6;
+						var mr = 13;
 						if(!obj1.isDead && !obj2.isDead && obj1.DNA.isProtein && obj2.DNA.isProtein && obj1.DNA.type == obj2.DNA.type && obj1.r<mr && obj2.r<mr){
 							obj1.join(obj2);
 						}
 						if(!obj1.isDead && obj1.DNA.isCell && obj2.DNA.isProtein && obj2.clock.time>tt){
-							if(obj2.DNA.isVirus && !obj2.isDead) obj2.damage(obj1);
-							else obj1.eat(obj2);
+							obj1.eat(obj2);
 						}
 						if(!obj2.isDead && obj2.DNA.isCell && obj1.DNA.isProtein && obj1.clock.time>tt){
-							if(obj1.DNA.isVirus && !obj1.isDead) obj1.damage(obj2);
-							else obj2.eat(obj1);
+							obj2.eat(obj1);
 						}
 						if(!obj1.isDead && obj2.isDead && obj1.DNA.isCell){
 							obj1.eat(obj2);
@@ -240,21 +273,19 @@
 					continue;
 				}
 				if(c.clock.time>c.DNA.lifeTime && c.DNA.lifeTime != -1) c.isDead = true;
-				c.m = c.r*c.r;
-				c.speed = Math.sqrt(c.r)/100;
-				c.fv.add(Point.random(1/(c.v.mag()+1)/220).scale(1/c.m));
+				c.speed = Math.sqrt(c.r)/320;
+				c.fv.add(Point.random(1/(c.v.mag()+1)/220).scale(1/c._m()));
 				c.v.add(c.fv);
-				c.v.scale(c.m/(c.m+Math.PI));
+				c.v.scale(c._m()/(c._m()+Math.PI));
 				c.p.add(c.v);
 				c.timer.update();
-				if((c.timer.is('d') || c.isDead) && c.DNA.isCell && (c.r>c.initR || c.isDead)){
-					var ii = Math.floor(c.m*1/500);
-					if(c.isDead) c.disintegrate();
+				if(c.timer.is('d') && c.DNA.isCell && (c.r>c.initR || c.isDead)){
+					var ii = Math.floor(c._m()*1/600);
 					for(var j=0;j<ii;j++){
 						this.addCell(c.disintegrate());
 					}
 				}
-				if(c.m>c.initR*c.initR*2 && c.DNA.isCell){
+				if(c._m()>=c.initR*c.initR*2 && c.DNA.isCell){
 					this.addCell(c.split());
 				}
 				if(c.isDead){
@@ -266,8 +297,14 @@
 			}
 		},
 		addCell: function(a,b,c,d){
-			if(a instanceof Cell) this.cells.push(a);
-			else this.cells.push(new Cell(a,b,c,d));
+			if(a instanceof Cell){
+				a.clock.running = !this.pause;
+				this.cells.push(a);
+			}else{
+				var _c_ = new Cell(a,b,c,d);
+				_c_.clock.running = !this.pause;
+				this.cells.push(_c_);
+			}
 		},
 		run: function(tool){
 			if(!this.pause){
@@ -284,6 +321,16 @@
 			}
 			this.lastPauseMode = this.pause;
 			this.draw(tool);
+		},
+		controls: function(){
+			if(typeof keys != undefined){
+				if(keys.z) b.s*=1.005;
+				if(keys.x) b.s/=1.005;
+				if(keys.ArrowUp) b.m.y+=2.2;
+				if(keys.ArrowDown) b.m.y-=2.2;
+				if(keys.ArrowLeft) b.m.x+=2.2;
+				if(keys.ArrowRight) b.m.x-=2.2;
+			}
 		}
 	});
 	const gs = ['defaultDNAValues', 'Body', 'DNA', 'Cell'];
