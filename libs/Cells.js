@@ -149,7 +149,7 @@
 		this.lastPauseMode = false;
 		this.m = new Point();
 		this.center = new Point();
-		this.info = true;
+		this.info = false;
 		this.s = 1;
 	}
 	Object.assign(Body.prototype, {
@@ -273,7 +273,7 @@
 					continue;
 				}
 				if(c.clock.time>c.DNA.lifeTime && c.DNA.lifeTime != -1) c.isDead = true;
-				c.speed = Math.sqrt(c.r)/320;
+				c.speed = Math.sqrt(c.r)/420;
 				c.fv.add(Point.random(1/(c.v.mag()+1)/220).scale(1/c._m()));
 				c.v.add(c.fv);
 				c.v.scale(c._m()/(c._m()+Math.PI));
