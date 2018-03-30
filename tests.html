@@ -16,6 +16,7 @@
 <script src="./libs/L.js"></script>
 <script src="./libs/Circuit.js"></script>
 <script src="./libs/Cells.js"></script>
+<script src="./libs/Beep.js"></script>
 <script type="text/javascript">
 	initSpace();
 	L.write('1');
@@ -52,8 +53,11 @@
 		tool.text(hit, 500, 500);
 		clock.update();
 		timer.update();
+		//console.log(note.gain.gain.value);
 		setTimeout(run, 5);
 	}
+	var note = new Beep.Note();
+	note.play();
 	run();
 </script>
 </html>
