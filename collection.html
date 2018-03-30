@@ -10,7 +10,7 @@
 		text-align: center;
 	}
 </style>
-<h1>- Collections - </h1>
+<div id="title"></div>
 <body>
 </body>
 <script src="./libs/AS.js"></script>
@@ -20,5 +20,9 @@
 <script src="./libs/Cells.js"></script>
 <script type="text/javascript">
 	initSpace();
+	var t = '-collections-';
+	for(var i=0;i<t.length;i++){
+		L.write(t[i], document.getElementById('title'));
+	}
 </script>
 </html>

@@ -2,7 +2,6 @@
   * particle simulationm
   * slideshow
   * solid simulation
+  * TOO MANY STUFF
 
-F/mr
-
-TRASH
+F/mr - torque rotational 

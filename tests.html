@@ -15,6 +15,7 @@
 <script src="./libs/Complex.js"></script>
 <script src="./libs/L.js"></script>
 <script src="./libs/Circuit.js"></script>
+<script src="./libs/Cells.js"></script>
 <script type="text/javascript">
 	initSpace();
 	L.write('1');
@@ -28,5 +29,16 @@
 	L.write('7');
 	L.write('8');
 	L.write('3');
+	L.write('PI');
+	var hit = false;
+	var b = new Button(200,200,100,20);
+	function run(){
+		background(255);
+		b.draw(tool);
+		hit = b.in(mouse);
+		tool.text(hit, 500, 500)
+		setTimeout(run, 5);
+	}
+	run();
 </script>
 </html>

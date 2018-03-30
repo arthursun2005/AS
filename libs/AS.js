@@ -150,6 +150,45 @@ Math.isPrime = function(num){
 	}
 	return true;
 };
+(function(gl){
+	gl._primes = function(){
+		var p = [2];
+		for(var i=0;i<1e4-1;i++){
+			var g = p[p.length-1];
+			g++;
+			while(!Math.isPrime(g)){g++;}
+			p.push(g);
+		}
+		function ii(n){
+			return (Math.abs(Math.round(n)-n)<Math.dx) ? true : false;
+		}
+		gl.primes = p;
+		function c(){
+			gl.Math.isPrime = function(num){
+				num = Math.floor(Math.abs(num));
+				if(Math.abs(num)<=1) return false;
+				var n = Math.sqrt(num);
+				for(var i=0;i<n;i++){
+					if(n>p[p.length-1]){
+						if(ii(num/i)) return false;
+					}else{
+						if(ii(num/p[i]) && num != p[i]) return false;
+					}
+				}
+				return true;
+			};
+		}
+		c();
+		for(var i=0;i<9e4;i++){
+			var g = p[p.length-1];
+			g++;
+			while(!Math.isPrime(g)){g++;}
+			p.push(g);
+		}
+		gl.primes = p;
+		c();
+	};
+})(this);
 function primeFactor(n){
 	var i = 2;
 	var factors = [];
@@ -177,7 +216,7 @@ Math.change = function(num,a,b){
 };
 function toHexColor(r,g,b,a = 255){
 	var _a = arguments;
-	if(_a.length == 1){
+	if(g == undefined && r != undefined){
 		if(typeof r == 'string'){
 			return r;
 		}else if(typeof r == 'number'){
@@ -185,7 +224,7 @@ function toHexColor(r,g,b,a = 255){
 			b = r;
 			a = 255;
 		}
-	}else if(_a.length == 2 && typeof _a[0] == 'number'&& typeof _a[1] == 'number'){
+	}else if(g != undefined && b == undefined && typeof _a[0] == 'number'&& typeof _a[1] == 'number'){
 		var _g = g;
 		g = r;
 		b = r;
@@ -427,7 +466,7 @@ Object.assign(Point.prototype, {
 		return this;
 	},
 	equals: function(v){
-		return ((v.x === this.x) && (v.y === this.y));
+		return ((v.x == this.x) && (v.y == this.y));
 	},
 	rotate: function(a){
 		var a0 = this.angle()+a;
@@ -437,7 +476,7 @@ Object.assign(Point.prototype, {
 		return this;
 	},
 	rotateAround: function(x,y,a){
-		if(arguments.length == 2 && x instanceof Point){
+		if(a == undefined && x instanceof Point){
 			var p = x.copy();
 			a = y;
 			this.sub(p);
@@ -607,20 +646,10 @@ Object.assign(Draw.prototype, {
 	},
 	stroke: function(r,g,b,a){
 		this._stroke = true;
-		if(!g){
-			this.strokeColor = toHexColor(r);
-		}else if(!b){
-			this.strokeColor = toHexColor(r, g);
-		}
 		this.strokeColor = toHexColor(r, g, b, a);
 	},
 	fill: function(r,g,b,a){
 		this._fill = true;
-		if(!g){
-			this.fillColor = toHexColor(r);
-		}else if(!b){
-			this.fillColor = toHexColor(r, g);
-		}
 		this.fillColor = toHexColor(r, g, b, a);
 	},
 	strokeSetA: function(obj){
@@ -669,7 +698,7 @@ Object.assign(Draw.prototype, {
 		}
 		var obj = {type: 'translate', x: _x, y: _y};
 		var o1 = this.tas[this.tas.length-1];
-		if(o1 && o1.type == 'translate' && o1.x == obj.x && o1.y == obj.y){
+		if(o1 && o1.type == 'translate' && o1.x == -obj.x && o1.y == -obj.y){
 			this.tas.splice(this.tas.length-1, 1);
 			return;
 		}
@@ -678,7 +707,7 @@ Object.assign(Draw.prototype, {
 	rotate: function(a){
 		var obj = {type: 'rotate', a: a};
 		var o1 = this.tas[this.tas.length-1];
-		if(o1 && o1.type == 'rotate' && o1.a == obj.a){
+		if(o1 && o1.type == 'rotate' && o1.a == -obj.a){
 			this.tas.splice(this.tas.length-1, 1);
 			return;
 		}
@@ -690,7 +719,7 @@ Object.assign(Draw.prototype, {
 		}
 		var obj = {type: 'scale', x: x, y: y};
 		var o1 = this.tas[this.tas.length-1];
-		if(o1 && o1.type == 'scale' && o1.x == obj.x && o1.y == obj.y){
+		if(o1 && o1.type == 'scale' && o1.x == 1/obj.x && o1.y == 1/obj.y){
 			this.tas.splice(this.tas.length-1, 1);
 			return;
 		}
@@ -715,11 +744,12 @@ Object.assign(Draw.prototype, {
 			if(this.tas[i].type == 'translate'){
 				this.d.translate(-this.tas[i].x, -this.tas[i].y);
 			}else if(this.tas[i].type == 'rotate'){
-				this.d.rotate(-this.tas.a);
+				this.d.rotate(-this.tas[i].a);
 			}else if(this.tas[i].type == 'scale'){
 				this.d.scale(1/this.tas[i].x, 1/this.tas[i].y);
 			}
 		}
+
 	},
 	s1: function(){
 		for(var i=this.tas.length-1;i>=0;i--){
@@ -742,12 +772,6 @@ Object.assign(Draw.prototype, {
 				this.d0.scale(1/this.tas[i].x, 1/this.tas[i].y);
 			}
 		}
-	},
-	reset: function(){
-		this.mx = 0;
-		this.my = 0;
-		this.a = 0;
-		this.s = 1;
 	},
 	line: function(x1,y1,x2,y2){
 		d = this.space.getContext("2d");
@@ -1009,11 +1033,6 @@ Geometry.Graph = function(x,y,f){
 };
 Object.assign(Geometry.Graph.prototype, {
 	background: function(r,g,b,a){
-		if(!g){
-			this._background = toHexColor(r);
-		}else if(!b){
-			this._background = toHexColor(r, g);
-		}
 		this._background = toHexColor(r, g, b, a);
 	},
 	graph: function(d){
@@ -1113,9 +1132,7 @@ Object.assign(Geometry.Graph.prototype, {
 				d.line(ad.x.start,i,ad.x.end,i);
 			}
 		}
-		d.scale(1/ad.x.scale,1/ad.y.scale);
-		d.rotate(-this.rotation);
-		d.translate(this.origin.minus());
+		d.pop();
 		this.graph(d);
 	},
 	int: function(a,b){
@@ -1275,7 +1292,7 @@ Object.assign(Geometry.Shape.prototype, {
 	},
 	draw: function(d){
 		d.strokeWeight(1.5);
-		d.stroke(120,170,200);
+		d.stroke(this.c);
 		if(!d){
 			console.warn("Geometry.Shape.draw: no parameter");
 			return;
@@ -1393,28 +1410,22 @@ Object.assign(Physics, {
 	Particle: function(){},
 	ParticleGroup: function(){},
 	ParticleSystem: function(){},
-	Obj: function(){},
-	Rope: function(){}
+	Obj: function(){}
 });
 Physics.Particle = function(x,y){
 	this.p = new Point(x,y);
 	this.v = new Point();
-	this.mass = 8;
+	this.m = 8;
 	this.clock = new Clock();
+	this.timer = new Timer();
 	this.lifeTime = -1;
 	this.group = null;
 	this.r = null;
-
 	this.weight = 0;
 	this.s = 0; // sums of normalized vectors
 	this.pressure = 0;
 };
 Physics.Particle.prototype.color = function(r,g,b,a){
-	if(!g){
-		this.c = toHexColor(r);
-	}else if(!b){
-		this.c = toHexColor(r, g);
-	}
 	this.c = toHexColor(r, g, b, a);
 };
 Physics.Particle.prototype.applyForce = function(f){
@@ -1458,6 +1469,7 @@ Physics.ParticleGroup = function(){
 
 	this.start = null;
 	this.end = null;
+	this.c = [0,0,180,200];
 };
 Object.assign(Physics.ParticleGroup.prototype, {
 	addParticle: function(p){
@@ -1474,11 +1486,11 @@ Object.assign(Physics.ParticleGroup.prototype, {
 		d.noStroke();
 		for (var i = this.ps.length - 1; i >= 0; i--) {
 			var p = this.ps[i];
-			d.fill(0,0,120);
+			d.fill(this.c[0],this.c[1],this.c[2],this.c[3]);
 			p.r = this.rs;
 			d.translate(p.p);
 			d.ellipse(0,0,this.rs,this.rs);
-			d.translate(p.p.minus());
+			d.pop();
 		}
 	},
 	calw1: function(weight){
@@ -1707,16 +1719,12 @@ Physics.Obj = function(shape){
 	this.density = 1;
 	this.surfaceFriction = 1/2;
 	this.fixed = false;
-	this._color = "#008800";
+	this.c = "#008800";
 	this.timer = new Clock();
+	this._color = '#ff0000ff';
 };
 Object.assign(Physics.Obj.prototype, {
 	color: function(r,g,b,a){
-		if(!g){
-			this._color = toHexColor(r);
-		}else if(!b){
-			this._color = toHexColor(r, g);
-		}
 		this._color = toHexColor(r, g, b, a);
 	},
 	addPoint: function(p, index){
@@ -1806,35 +1814,32 @@ Object.assign(Physics.Obj.prototype, {
 	draw: function(d){
 		var cm = this.getCenter();
 		// spins around the center
+		d.noFill();
+		d.stroke(this._color);
 		this.shape.sub(cm);
 		d.translate(cm);
 		d.rotate(this.angle);
 		d.scale(this.scale);
 		this.shape.draw(d);
-		d.scale(1/this.scale);
-		d.rotate(-this.angle);
-		d.translate(cm.minus());
+		d.pop();
 		this.shape.add(cm);
 	}
 });
 Physics.Obj.attach = function(a,b,c){
 };
-Physics.Rope = function(){
-	this.objs = [];
-};
-Object.assign(Physics.Rope.prototype, {
-	set: function(){}
-});
 function PhysicsWorld(space){
 	this.particleSystem = new Physics.ParticleSystem();
 	this.objs = [];
 	this.gravity = 1/100;
 	this.tool = new Draw(space);
 	this.clock = new Clock();
+	this.timer = new Timer();
+	this.pause = false;
 	this.init();
 }
 Object.assign(PhysicsWorld.prototype, {
-	init: function(){},
+	init: function(){
+	},
 	addObj: function(obj){
 		this.objs.push(obj);
 	},
@@ -1873,13 +1878,47 @@ Object.assign(PhysicsWorld.prototype, {
 function Button(x,y,w,h,t,f){
 	this.p = new Point(x, y);
 	this.d = new Point(w, h);
-	this.t = t || 'Press ME!';
+	this.v = new Point();
+	this.t = t || '1*1 = 1';
 	this.f = f;
-	window.addEventListener('onclick', f, false);
+	this.a = 1;
+	this.c = '#00ddeeff';
+	window.addEventListener('onmousedown', f, false);
 }
 Button.prototype = {
-	update: function(){},
-	draw: function(tool){}
+	in: function(x,y){
+		if(x instanceof Point){
+			var _p = x.copy();
+		}else{
+			var _p = new Point(x,y);
+		}
+		_p.rotateAround(this.p, -this.a);
+		return _p.x>this.p.x-this.d.x/2 && 
+			_p.x<this.p.x+this.d.x/2 && 
+			_p.y>this.p.y-this.d.y/2 &&
+			_p.y<this.p.y+this.d.y/2;
+	},
+	change: function(f){
+		window.removeEventListener('onmousedown', this.f, false);
+		this.f = f;
+		window.addEventListener('onmousedown', f, false);
+	},
+	update: function(){
+		this.p.add(this.v);
+	},
+	draw: function(tool){
+		tool.fill(this.c);
+		tool.stroke(0);
+		tool.rectMode('center');
+		tool.translate(this.p);
+		tool.rotate(this.a);
+		tool.rect(0,0,this.d.x,this.d.y,6);
+		tool.fill(0);
+		var s = this.d.x*this.t.length*1/20>this.d.y ? this.d.y/this.t.length*7 : this.d.x/5.5;
+		tool.textSize(s*0.9);
+		tool.text(this.t,0,this.d.x/20);
+		tool.pop();
+	}
 };
 function SlideShow(space, tool){
 	if(arguments.length<2){

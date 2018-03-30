@@ -1,3 +1,16 @@
+/**
+	* Complex numbers
+	* new Complex(2) = 2+0i
+	* new Complex(2,23) = 2+23i
+	* new Complex(20,2,true) = 20*e^(2i)
+	* new Complex('6') = 6+0i
+	* new Complex('69i') = 69i
+	* new Complex('-3.78') = -3.78i
+	* new Complex('2-i') = 2-i
+	* new Complex('2/23-7*9i') = 2/23-63i
+	*
+	* 
+**/
 function Complex(a, b, c){
 	this.set(a,b,c);
 	return this;
@@ -58,7 +71,6 @@ Object.assign(Complex.prototype, {
 	},
 	angle: function(){
 		var a = Math.atan2(this.im, this.re);
-		if(a<0) a+=Math.PI*2;
 		return a;
 	},
 	mag: function(){
@@ -101,21 +113,18 @@ Object.assign(Complex.prototype, {
 		if(!(c instanceof Complex)){
 			c = new Complex(c,d,e);
 		}
-		_c.mul(c.inverse2());
+		_c.mul(c.inverse());
 		this.get(_c);
 		return this;
 	},
-	pow: function(c, k){
+	pow: function(a, b, c){
 		// z1^z2 = e^(z2*ln(z1))
-		if(typeof c == 'number' && typeof k == 'number'){
-			c = new Complex(c, k);
-			k = arguments[2];
-		}else if(typeof c == 'number'){
-			c = new Complex(c, 0);
-			k = 0;
+		if(a instanceof Complex){
+			var _c = a._clone();
+		}else{
+			var _c = new Complex(a,b,c);
 		}
-		var a = Complex.mul(c, this.ln(k));
-		return (a.exp());
+		return (_c.mul(this.ln())).exp();
 	},
 	sqrt: function(){
 		return this.pow(1/2);
@@ -129,7 +138,8 @@ Object.assign(Complex.prototype, {
 		return this;
 	},
 	ln: function(k = 0){
-		return new Complex(Math.log(this.mag()), this.angle()+2*Math.PI*k);
+		var _c = this._clone();
+		return new Complex(Math.log(_c.mag()), _c.angle()+2*Math.PI*k);
 	},
 	exp: function(){
 		if(this.re == 0 && this.im == 0){
@@ -160,9 +170,6 @@ Object.assign(Complex.prototype, {
 		return this;
 	},
 	inverse: function(){
-		return new Complex(1/this.re, 1/this.im);
-	},
-	inverse2: function(){
 		var _c = this._clone();
 		_c.mul(_c.conj());
 		var r = _c.re;
@@ -227,6 +234,16 @@ Object.assign(Complex.prototype, {
 		var _c = this._clone();
 		var g = _c.sinh().div(_c.cosh());
 		return g;
+	},
+	isPrime: function(){
+		if(this.re == 0 && this.im == 0) return false;
+		else if(this.im == 0){
+			return Math.isPrime(this.re) && (this.re-3)%4<Complex.eps;
+		}else if(this.re == 0){
+			return Math.isPrime(this.im) && (this.im-3)%4<Complex.eps;
+		}else{
+			return Math.isPrime(this.im*this.im+this.re*this.re);
+		}
 	}
 });
 Object.assign(Complex, {
@@ -279,4 +296,34 @@ Object.assign(Complex, {
 		}
 		return _a;
 	},
+	polar: function(r,a,p = new Complex()){
+		var c = new Complex();
+		c.re = Math.cos(a)*r+p.re;
+		c.im = Math.sin(a)*r+p.im;
+		return c;
+	},
+	isPrime: function(a,b,c){
+		if(a instanceof Complex){
+			return a.isPrime();
+		}else{
+			var _c = new Complex(a,b,c);
+			return _c.isPrime();
+		}
+	},
+	Re: function(a,b,c){
+		if(a instanceof Complex){
+			var _c = a._clone();
+		}else{
+			var _c = new Complex(a,b,c);
+		}
+		return _c.re;
+	},
+	Im: function(a,b,c){
+		if(a instanceof Complex){
+			var _c = a._clone();
+		}else{
+			var _c = new Complex(a,b,c);
+		}
+		return _c.im;
+	}
 });
