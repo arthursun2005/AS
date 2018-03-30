@@ -60,6 +60,7 @@
 		this.gone = false;
 		this.health = this._m();
 		this.speed = 0;
+		this.usage = 0;
 	}
 	Object.assign(Cell.prototype, {
 		_r: function(num){

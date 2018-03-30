@@ -6,12 +6,14 @@
 	* new Complex('6') = 6+0i
 	* new Complex('69i') = 69i
 	* new Complex('-3.78') = -3.78i
-	* new Complex('2-i') = 2-i
-	* new Complex('2/23-7*9i') = 2/23-63i
-	*
-	* 
+	* new Complex('2-I') = 2-i
+	* new Complex('2/23-7*9I') = 2/23-63i
 **/
 function Complex(a, b, c){
+	if(!this.set){
+		throw new Error('use the new operator');
+		return;
+	}
 	this.set(a,b,c);
 	return this;
 }
@@ -76,7 +78,7 @@ Object.assign(Complex.prototype, {
 	mag: function(){
 		return Math.pow(this.re*this.re+this.im*this.im,1/2);
 	},
-	add: function(c, d){
+	add: function(c, d = 0){
 		if(d != undefined){
 			this.re+=c;
 			this.im+=d;
@@ -89,7 +91,7 @@ Object.assign(Complex.prototype, {
 	get: function(p){
 		this.re = p.re, this.im = p.im;
 	},
-	sub: function(c, d){
+	sub: function(c, d = 0){
 		if(d != undefined){
 			this.re-=c;
 			this.im-=d;
@@ -182,7 +184,7 @@ Object.assign(Complex.prototype, {
 		return new Complex(this.re, -this.im);
 	},
 	toString: function(polarForm){
-		if(polarForm != undefined){
+		if(polarForm){
 			var m = this.mag(), a = this.angle();
 			if(Math.abs(a-1) <= Complex.eps){
 				var s = a>0 ? '' : '-';
@@ -325,5 +327,69 @@ Object.assign(Complex, {
 			var _c = new Complex(a,b,c);
 		}
 		return _c.im;
-	}
+	},
+	sin: function(a,b,c){
+		if(a instanceof Complex){
+			var _c = a._clone();
+		}else{
+			var _c = new Complex(a,b,c);
+		}
+		return _c.sin();
+	},
+	cos: function(a,b,c){
+		if(a instanceof Complex){
+			var _c = a._clone();
+		}else{
+			var _c = new Complex(a,b,c);
+		}
+		return _c.cos();
+	},
+	tan: function(a,b,c){
+		if(a instanceof Complex){
+			var _c = a._clone();
+		}else{
+			var _c = new Complex(a,b,c);
+		}
+		return _c.tan();
+	},
+	sinh: function(a,b,c){
+		if(a instanceof Complex){
+			var _c = a._clone();
+		}else{
+			var _c = new Complex(a,b,c);
+		}
+		return _c.sinh();
+	},
+	cosh: function(a,b,c){
+		if(a instanceof Complex){
+			var _c = a._clone();
+		}else{
+			var _c = new Complex(a,b,c);
+		}
+		return _c.cosh();
+	},
+	tanh: function(a,b,c){
+		if(a instanceof Complex){
+			var _c = a._clone();
+		}else{
+			var _c = new Complex(a,b,c);
+		}
+		return _c.tanh();
+	},
+	ln: function(a,b,c){
+		if(a instanceof Complex){
+			var _c = a._clone();
+		}else{
+			var _c = new Complex(a,b,c);
+		}
+		return _c.ln();
+	},
+	exp: function(a,b,c){
+		if(a instanceof Complex){
+			var _c = a._clone();
+		}else{
+			var _c = new Complex(a,b,c);
+		}
+		return _c.exp();
+	},
 });

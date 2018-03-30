@@ -31,12 +31,27 @@
 	L.write('3');
 	L.write('PI');
 	var hit = false;
-	var b = new Button(200,200,100,20);
+	function f(){
+		if(b.in(mouse)){
+			c = (c+10)%255;
+		}
+	}
+	var b = new Button(200,200,100,20, 'TEST OBJECT', f);
+	function f2(){
+		if(b.in(mouse)){
+			c = (c+60)%255;
+		}
+	}
+	b.change(f2);
+	b.ac = 0.009;
+	var c = 255;
 	function run(){
-		background(255);
-		b.draw(tool);
+		background(c, Math.abs(Math.sin(clock.time/100)*65), Math.abs(Math.sin(clock.time/370)*85));
+		b.run(tool);
 		hit = b.in(mouse);
-		tool.text(hit, 500, 500)
+		tool.text(hit, 500, 500);
+		clock.update();
+		timer.update();
 		setTimeout(run, 5);
 	}
 	run();

@@ -216,7 +216,9 @@ Math.change = function(num,a,b){
 };
 function toHexColor(r,g,b,a = 255){
 	var _a = arguments;
-	if(g == undefined && r != undefined){
+	if(r == undefined){
+		return '#000000';
+	}else if(g == undefined && r != undefined){
 		if(typeof r == 'string'){
 			return r;
 		}else if(typeof r == 'number'){
@@ -1827,63 +1829,16 @@ Object.assign(Physics.Obj.prototype, {
 });
 Physics.Obj.attach = function(a,b,c){
 };
-function PhysicsWorld(space){
-	this.particleSystem = new Physics.ParticleSystem();
-	this.objs = [];
-	this.gravity = 1/100;
-	this.tool = new Draw(space);
-	this.clock = new Clock();
-	this.timer = new Timer();
-	this.pause = false;
-	this.init();
-}
-Object.assign(PhysicsWorld.prototype, {
-	init: function(){
-	},
-	addObj: function(obj){
-		this.objs.push(obj);
-	},
-	addElasticGroup: function(){
-	},
-	addParticle: function(){
-	},
-	addViscousParticle: function(){
-	},
-	addTensileParticle: function(){
-	},
-	addPowderParticle: function(){
-	},
-	addRope: function(){
-	},
-	solve: function(){
-	},
-	update: function(){
-		for (var i = this.objs.length - 1; i >= 0; i--) {
-			this.objs[i].v.y+=this.gravity;
-			this.objs[i].update();
-		}
-		this.clock.update();
-	},
-	draw: function(d){
-		for (var i = this.objs.length - 1; i >= 0; i--) {
-			this.objs[i].draw(d);
-		}
-	},
-	run: function(){
-		this.interactions();
-		this.update();
-		if(this.tool) this.draw(this.tool);
-	}
-});
 function Button(x,y,w,h,t,f){
 	this.p = new Point(x, y);
 	this.d = new Point(w, h);
 	this.v = new Point();
-	this.t = t || '1*1 = 1';
+	this.t = t || 'new Button';
 	this.f = f;
 	this.a = 1;
+	this.ac = 0;
 	this.c = '#00ddeeff';
-	window.addEventListener('onmousedown', f, false);
+	window.addEventListener('mousedown', this.f, false);
 }
 Button.prototype = {
 	in: function(x,y){
@@ -1899,12 +1854,13 @@ Button.prototype = {
 			_p.y<this.p.y+this.d.y/2;
 	},
 	change: function(f){
-		window.removeEventListener('onmousedown', this.f, false);
+		window.removeEventListener('mousedown', this.f, false);
 		this.f = f;
-		window.addEventListener('onmousedown', f, false);
+		window.addEventListener('mousedown', f, false);
 	},
 	update: function(){
 		this.p.add(this.v);
+		this.a+=this.ac;
 	},
 	draw: function(tool){
 		tool.fill(this.c);
@@ -1918,6 +1874,10 @@ Button.prototype = {
 		tool.textSize(s*0.9);
 		tool.text(this.t,0,this.d.x/20);
 		tool.pop();
+	},
+	run: function(tool){
+		this.update();
+		this.draw(tool);
 	}
 };
 function SlideShow(space, tool){
@@ -1959,7 +1919,53 @@ Object.assign(SlideShow.prototype, {
 		this.draw(this.page);
 	}
 });
-
+function PhysicsWorld(tool){
+	this.particleSystem = new Physics.ParticleSystem();
+	this.objs = [];
+	this.gravity = 1/77;
+	this.tool = tool;
+	this.clock = new Clock();
+	this.timer = new Timer();
+	this.pause = false;
+	this.lastPause = this.pause;
+}
+Object.assign(PhysicsWorld.prototype, {
+	addObj: function(obj){
+		this.objs.push(obj);
+	},
+	addElasticGroup: function(){
+	},
+	addParticle: function(){
+	},
+	addViscousParticle: function(){
+	},
+	addTensileParticle: function(){
+	},
+	addPowderParticle: function(){
+	},
+	addRope: function(info){
+	},
+	solve: function(){
+	},
+	update: function(){
+		for (var i = this.objs.length - 1; i >= 0; i--) {
+			this.objs[i].v.y+=this.gravity;
+			this.objs[i].update();
+		}
+		this.clock.update();
+	},
+	draw: function(d){
+		for (var i = this.objs.length - 1; i >= 0; i--) {
+			this.objs[i].draw(d);
+		}
+	},
+	run: function(){
+		this.interactions();
+		this.update();
+		if(this.tool) this.draw(this.tool);
+		this.lastPause = this.pause;
+	}
+});
 
 
 
