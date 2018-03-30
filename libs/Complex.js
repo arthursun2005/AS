@@ -9,6 +9,7 @@
 	* new Complex('2-I') = 2-i
 	* new Complex('2/23-7*9I') = 2/23-63i
 **/
+
 function Complex(a, b, c){
 	if(!this.set){
 		throw new Error('use the new operator');
@@ -393,3 +394,7 @@ Object.assign(Complex, {
 		return _c.exp();
 	},
 });
+
+function z_(a,b,c){
+	return new Complex(a,b,c);
+}

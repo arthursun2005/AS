@@ -1439,7 +1439,7 @@ Physics.Particle.prototype.draw = function(){
 Physics.Particle.prototype.update = function(){
 	if(this.group.fixed) this.v = new Point();
 	this.p.add(this.v);
-	this.clock.update()
+	this.clock.update();
 };
 Physics.Particle.prototype.copy = function(){
 	var p = new this.constructor(this.p.x,this.p.y);
@@ -1928,6 +1928,9 @@ function PhysicsWorld(tool){
 	this.timer = new Timer();
 	this.pause = false;
 	this.lastPause = this.pause;
+	this.my = new Point();
+	this.center = new Point();
+	this.scl = 1;
 }
 Object.assign(PhysicsWorld.prototype, {
 	addObj: function(obj){
@@ -1964,6 +1967,16 @@ Object.assign(PhysicsWorld.prototype, {
 		this.update();
 		if(this.tool) this.draw(this.tool);
 		this.lastPause = this.pause;
+	},
+	controls: function(){
+		if(typeof keys != undefined){
+			if(keys.z) this.scl*=1.005;
+			if(keys.x) this.scl/=1.005;
+			if(keys.ArrowUp) this.my.y+=2.2;
+			if(keys.ArrowDown) this.my.y-=2.2;
+			if(keys.ArrowLeft) this.my.x+=2.2;
+			if(keys.ArrowRight) this.my.x-=2.2;
+		}
 	}
 });
 

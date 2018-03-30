@@ -325,12 +325,14 @@
 		},
 		controls: function(){
 			if(typeof keys != undefined){
-				if(keys.z) b.s*=1.005;
-				if(keys.x) b.s/=1.005;
-				if(keys.ArrowUp) b.m.y+=2.2;
-				if(keys.ArrowDown) b.m.y-=2.2;
-				if(keys.ArrowLeft) b.m.x+=2.2;
-				if(keys.ArrowRight) b.m.x-=2.2;
+				if(keys.z) this.s*=1.005;
+				if(keys.x) this.s/=1.005;
+				if(keys.ArrowUp) this.m.y+=2.2;
+				if(keys.ArrowDown) this.m.y-=2.2;
+				if(keys.ArrowLeft) this.m.x+=2.2;
+				if(keys.ArrowRight) this.m.x-=2.2;
+			}else{
+				console.log('Hello');
 			}
 		}
 	});
