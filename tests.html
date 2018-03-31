@@ -11,11 +11,10 @@
 <meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
 <body>
 </body>
-<script src="./libs/AS.js"></script>
+<script src="./libs/Draw.js"></script>
 <script src="./libs/Complex.js"></script>
 <script src="./libs/L.js"></script>
-<script src="./libs/Circuit.js"></script>
-<script src="./libs/Cells.js"></script>
+<script src="./libs/Physics.js"></script>
 <script src="./libs/Music.js"></script>
 <script type="text/javascript">
 	initSpace();
@@ -48,11 +47,10 @@
 	b.ac = 0.009;
 	var c = 255;
 	function run(){
-		background(c, Math.abs(Math.sin(clock.time/100)*65), Math.abs(Math.sin(clock.time/370)*85));
+		//background(c, Math.abs(Math.sin(clock.time/100)*65), Math.abs(Math.sin(clock.time/370)*85));
 		b.run(tool);
 		hit = b.in(mouse);
 		tool.text(hit, 500, 500);
-		clock.update();
 		timer.update();
 		setTimeout(run, 5);
 	}

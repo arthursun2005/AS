@@ -1,6 +1,6 @@
 (function(global){
 	if(typeof Draw == 'undefined' || typeof Point == 'undefined'){
-		console.error("include in AS.js");
+		console.error("include in Draw.js");
 		return;
 	}
 	/**
