@@ -8,7 +8,7 @@
 	Music.nameToDynamics = function(name, L = 1/9){
 		var d = L;
 		for(var i=name.length-1;i>=0;i--){
-			if(name[i] == 'm') d+=(L/1.5-d)*1/1.6;
+			if(name[i] == 'm') d+=(L/1.8-d)*1/1.6;
 			else if(name[i] == 'f') d+=(1-d)*1/3.5;
 			else if(name[i] == 'p') d+=(-d)*1/3;
 		}
@@ -73,27 +73,23 @@
 		this.oscillator.start();
 		this.context.suspend();
 		this.oscillator.type = 'triangle';
-		this._s = 0.86;
+		this._s = this.score != undefined ? this.score._s : 0.86;
 		this.f = null;
+		this.T = this.score != undefined ? this.score.tempo : 180;
 	};
 	Object.assign(Music.Note.prototype, {
 		play: function(time = 0){ // in beats
-			var A, T;
+			var A;
 			var that = this;
-			if(that.score){
-				A = that.score.A;
-				this.T = that.score.tempo;
-			}else{
-				A = 440;
-				this.T = 180;
-			}
+			if(that.score) A = that.score.A;
+			else A = 440;
 			that.fp = function(){
 				var T = that.T;
 				that.context.resume();
 				that.gain.connect(that.context.destination);
 				that.oscillator.connect(that.gain);
 				that.oscillator.frequency.setTargetAtTime(Music.noteToFrequency(that.name, A),that.context.currentTime,0);
-				that.gain.gain.setTargetAtTime(that.info.loudness,that.context.currentTime+Math.min(0.18, Music.tt(T,that.duration)*0.05),that.info<1/2 ? Music.tt(T,that.duration)*2 : Music.tt(T,that.duration)*0.02);
+				that.gain.gain.setTargetAtTime(that.info.loudness,that.context.currentTime+Math.min(0.18, Music.tt(T,that.duration)*0.05),that.info<1/2 ? Music.tt(T,that.duration)*2 : Music.tt(T,that.duration)*0.0075);
 				that.gain.gain.setTargetAtTime(0,that.context.currentTime+Music.tt(T,that.duration)*that._s, Music.tt(T,that.duration)*0.25);
 				if(that.f) that.f();
 			};
@@ -107,6 +103,7 @@
 		this.notes = [];
 		this.L = 1/9;
 		this._st = 0.56;
+		this._s = 0.86;
 	};
 	Object.assign(Music.Score.prototype, {
 		play: function(){
@@ -116,7 +113,7 @@
 		},
 		add: function(){
 			var arr = arguments;
-			var interval = 1/4, on = this.notes[this.notes.length-1] ? this.notes[this.notes.length-1].wait+this.notes[this.notes.length-1].note.duration : 0, loudness = this.L, chord = false, f = null;
+			var interval = 1/4, on = this.notes[this.notes.length-1] != undefined ? (this.notes[this.notes.length-1].wait+this.notes[this.notes.length-1].note.duration)*this.tempo/this.notes[this.notes.length-1].note.T : 0, loudness = this.L, chord = false, f = null;
 			for(var i=0;i<arr.length;i++){
 				var p = arr[i];
 				if(typeof p == 'object'){
@@ -268,8 +265,10 @@
 						on+=interval
 					}else if(!isNaN(Number(p))){
 						interval = Number(p);
-					}else if(p == 'wait'){
-						on+=interval;
+					}else if(p.substring(0,4) == 'wait'){
+						if(p.length>4){
+							on+=Number(p.substring(5,p.length));
+						}else on+=interval;
 					}else if(p != ''){
 						var n = new Music.Note(this);
 						n.name = p;
