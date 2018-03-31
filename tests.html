@@ -31,6 +31,7 @@
 	L.write('8');
 	L.write('3');
 	L.write('PI');
+	L.write('em');
 	var hit = false;
 	function f(){
 		if(b.in(mouse)){
@@ -53,11 +54,9 @@
 		tool.text(hit, 500, 500);
 		clock.update();
 		timer.update();
-		//console.log(note.gain.gain.value);
 		setTimeout(run, 5);
 	}
-	var note = new Beep.Note();
-	note.play();
 	run();
+	var score = new Music.Score();
 </script>
 </html>

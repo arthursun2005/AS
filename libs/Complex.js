@@ -3,13 +3,11 @@
 	* new Complex(2) = 2+0i
 	* new Complex(2,23) = 2+23i
 	* new Complex(20,2,true) = 20*e^(2i)
-	* new Complex('6') = 6+0i
 	* new Complex('69i') = 69i
-	* new Complex('-3.78') = -3.78i
+	* new Complex('-3.78i') = -3.78i
 	* new Complex('2-I') = 2-i
 	* new Complex('2/23-7*9I') = 2/23-63i
 **/
-
 function Complex(a, b, c){
 	if(!this.set){
 		throw new Error('use the new operator');
@@ -79,7 +77,7 @@ Object.assign(Complex.prototype, {
 	mag: function(){
 		return Math.pow(this.re*this.re+this.im*this.im,1/2);
 	},
-	add: function(c, d = 0){
+	add: function(c, d){
 		if(d != undefined){
 			this.re+=c;
 			this.im+=d;
@@ -92,7 +90,7 @@ Object.assign(Complex.prototype, {
 	get: function(p){
 		this.re = p.re, this.im = p.im;
 	},
-	sub: function(c, d = 0){
+	sub: function(c, d){
 		if(d != undefined){
 			this.re-=c;
 			this.im-=d;
@@ -247,6 +245,14 @@ Object.assign(Complex.prototype, {
 		}else{
 			return Math.isPrime(this.im*this.im+this.re*this.re);
 		}
+	},
+	zeta: function(num = 1e5){
+		var sum = new Complex();
+		for(var i=1;i<=num;i++){
+			var n = new Complex(i);
+			sum.add(n.pow(this).inverse());
+		}
+		return sum;
 	}
 });
 Object.assign(Complex, {
@@ -273,29 +279,16 @@ Object.assign(Complex, {
 	pow: function(){
 		var a = arguments;
 		var _a = a[0]._clone();
-		if(typeof a[a.length-1] == 'number'){
-			for(var i=1;i<arguments.length-1;i++){
-				_a = _a.pow(a[i], a[a.length-1]);
-			}
-		}else{
-			for(var i=1;i<arguments.length;i++){
-				_a = _a.pow(a[i], 0);
-			}
+		for(var i=1;i<arguments.length;i++){
+			_a = _a.pow(a[i]);
 		}
 		return _a;
 	},
 	pow2: function(){
 		var a = arguments;
-		if(typeof a[a.length-1] == 'number'){
-			var _a = a[arguments.length-2]._clone();
-			for(var i=arguments.length-3;i>=0;i--){
-				_a = _a.pow(a[i], a[a.length-1]);
-			}
-		}else{
-			var _a = a[arguments.length-1]._clone();
-			for(var i=arguments.length-2;i>=0;i--){
-				_a = _a.pow(a[i], 0);
-			}
+		var _a = a[arguments.length-1]._clone();
+		for(var i=arguments.length-2;i>=0;i--){
+			_a = _a[i].pow(_a);
 		}
 		return _a;
 	},
@@ -392,9 +385,6 @@ Object.assign(Complex, {
 			var _c = new Complex(a,b,c);
 		}
 		return _c.exp();
-	},
+	}
 });
-
-function z_(a,b,c){
-	return new Complex(a,b,c);
-}
+function z_(a,b,c){return new Complex(a,b,c);}

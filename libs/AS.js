@@ -28,19 +28,16 @@ function Eq(){
 		return new Function('x', 'return '+a[0]);
 	}
 }
-function isArray(obj){
-	if(typeof obj == "object" && (obj.length || typeof obj.push == "function")){
-		return true;
-	}else{
-		return false;
-	}
-}
-Array.prototype.clone = function(){
+Array.prototype._clone = function(){
 	var arr = [];
 	for(var i=0;i<this.length;i++){
 		var o = this[i];
 		if(typeof o == 'object'){
-			arr[i] = o.clone();
+			if(Array.isArray(o)){
+				arr[i] = o._clone();
+			}else{
+				arr[i] = o.clone();
+			}
 		}else{
 			arr[i] = this[i];
 		}
@@ -50,8 +47,13 @@ Array.prototype.clone = function(){
 Object.prototype.clone = function(){
 	var obj = {}, me = this;
 	for(var key in me){
-		if(typeof this[key] == 'object'){
-			obj[key] = this[key].clone();
+		var o = me[i];
+		if(typeof o == 'object'){
+			if(Array.isArray(o)){
+				arr[i] = o._clone();
+			}else{
+				arr[i] = o.clone();
+			}
 		}else{
 			obj[key] = this[key];
 		}
