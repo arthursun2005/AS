@@ -1,5 +1,6 @@
 (function(global){
 	var Music = {};
+	Music.context = new window.AudioContext();
 	Music.step = Math.pow(2,1/12);
 	Music.noteNames = ['A','B','C','D','E','F','G'];
 	Music.tt = function(a,b){
@@ -66,7 +67,7 @@
 		this.name = 'C5';
 		this.score = score;
 		if(this.score) this.context = this.score.context;
-		else this.context = new window.AudioContext();
+		else this.context = Music.context;
 		this.oscillator = this.context.createOscillator();
 		this.gain = this.context.createGain();
 		this.gain.gain.setTargetAtTime(this.info.loudness/8,0,0);
@@ -97,7 +98,7 @@
 		}
 	});
 	Music.Score = function(){
-		this.context = new AudioContext();
+		this.context = Music.context;
 		this.tempo = 180;
 		this.A = 440;
 		this.notes = [];
