@@ -16,7 +16,7 @@
 <script src="./libs/L.js"></script>
 <script src="./libs/Circuit.js"></script>
 <script src="./libs/Cells.js"></script>
-<script src="./libs/Beep.js"></script>
+<script src="./libs/Music.js"></script>
 <script type="text/javascript">
 	initSpace();
 	L.write('1');
@@ -58,5 +58,10 @@
 	}
 	run();
 	var score = new Music.Score();
+	score.tempo = 196;
+	// a melody I made
+	score.add('m',['G',1/4],{note: ['G','A','B','G','A','E','G'], subRhythm: [1/8,1/8,1/8,1/8,1/8,1/8,1/4], times: 2}, {note: ['G','A','B'], rhythm: 1/8, times: 2},{note: ['A','B','C5'], rhythm: 1/8, times: 2}, {note: ['E5','C5','A','B','A','E'], rhythm: 1/8}, ['G', 1/4], ['G', {rhythm: 1/4, dynamics: 'ff'}], 'f', {note: ['G','A','B','F#','G','F#'], rhythm: 1/8}, ['E', 1/4], {note: ['G','A','B','G','A','E','G'], subRhythm: [1/8,1/8,1/8,1/8,1/8,1/8,1/4]}, {note: ['G','A','B','F#','G','F#'], rhythm: 1/8}, ['E', 1/4], {note: ['E','F#','E','G','B','.G','B','E5','F5#','A5','F5#','B5','G5','D5','B','G','F#'], rhythm: 1/8}, ['E', 1/4], 1/8, 'G','A','B','G','A','E',1/4,'G',1/8,'A','B','G','B','C5',1/4,'D5',1/8,{note: '.D5', times: 3}, {note: ['C5','B','C5','D5','.D5','.D5','.D5','C5','B','C5','A','.A','.A','.A','G'], subRhythm: [1/8,1/8,1/8,1/4,1/8,1/8,1/8,1/8,1/8,1/8,1/4,1/8,1/8,1/8]}, {note: ['A','E','G'], times: 3, subRhythm: [1/8,1/8,1/4], subDynamics: ['mf','mf','ffff']}, {note: ['A','E','G','F#','D','G','F#','D'], rhythm: 1/8, subDynamics: ['mf','mf','ffff','mf','mf','ffff','mf']}, ['E', {dynamics: 'm', rhythm: 1/2}]);
+	score.add('mp', {note: ['.G','.B','.G','.C5','.G','.B','.G','.A'], rhythm: 1/8}, {note: ['B','D5'], rhythm: 1/4}, {note: ['.G','.B','.G','.C5','.G','.B','.G','.E'], rhythm: 1/8}, {note: ['A','D5'], rhythm: 1/4}, {note: ['.E','.A','.G','.F#','.E','.G','.D','.E'], rhythm: 1/8}, {note: ['E','B'], rhythm: 1/4}, {note: ['.G','.A','.G','.E','.F#','.G','.F#','.D'], rhythm: 1/8}, {note: ['E','E5'], rhythm: 1/4}, 'mf', {note: ['.E5b','.G5','.E5b','.A5b','.E5b','.G5','.E5b','.F5#'], rhythm: 1/8}, {note: ['G5','B5b'], rhythm: 1/4}, {note: ['.E5b','.G5','.E5b','.A5b','.E5b','.G5','.E5b','.C5'], rhythm: 1/8}, {note: ['F5#','B5b'], rhythm: 1/4}, {note: ['.C5','.F5#','.E5b','.D5','.C5','.E5b','.B4b','.C5'], rhythm: 1/8}, {note: ['C5','G5'], rhythm: 1/4}, {note: ['.E5b','.F5#','.E5b','.C5','.D5','.E5b','.D5','.B4b'], rhythm: 1/8}, {note: ['C5','C6'], rhythm: 1/4}, 'ff', {note: ['.G5','.B5','.G5','.C6','.G5','.B5','.G5','.A5'], rhythm: 1/8}, {note: ['B5','D6'], rhythm: 1/4}, {note: ['.G5','.B5','.G5','.C6','.G5','.B5','.G5','.E5'], rhythm: 1/8}, {note: ['A5','D6'], rhythm: 1/4}, {note: ['.E5','.A5','.G5','.F#5','.E5','.G5','.D5','.E5'], rhythm: 1/8}, {note: ['E5','B5'], rhythm: 1/4}, {note: ['.G5','.A5','.G5','.E5','.F#5','.G5','.F#5','.D5'], rhythm: 1/8}, {note: ['E5','E6'], rhythm: 1/4});
+	score.play();
 </script>
 </html>
