@@ -105,12 +105,17 @@
 		this.L = 1/9;
 		this._st = 0.56;
 		this._s = 0.86;
+		this.playing = false;
 	};
 	Object.assign(Music.Score.prototype, {
 		play: function(){
+			var time = 0;
 			for(var i=0;i<this.notes.length;i++){
 				this.notes[i].note.play(this.notes[i].wait);
+				time+=Music.tt(this.notes[i].wait);
 			}
+			this.playing = true;
+			window.setTimeout(function(){}, 0);
 		},
 		add: function(){
 			var arr = arguments;
