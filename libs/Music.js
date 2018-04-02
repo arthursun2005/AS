@@ -1,6 +1,6 @@
 (function(global){
 	var Music = {};
-	Music.context = new window.AudioContext();
+	Music.context = new (window.AudioContext || webkitAudioContext)();
 	Music.step = Math.pow(2,1/12);
 	Music.noteNames = ['A','B','C','D','E','F','G'];
 	Music.tt = function(a,b){
@@ -112,10 +112,11 @@
 			var time = 0;
 			for(var i=0;i<this.notes.length;i++){
 				this.notes[i].note.play(this.notes[i].wait);
-				time+=Music.tt(this.notes[i].wait);
+				if(i>0) time+=(Music.tt(this.notes[i].note.T, this.notes[i].wait)-Music.tt(this.notes[i-1].note.T, this.notes[i-1].wait));
 			}
 			this.playing = true;
-			window.setTimeout(function(){}, 0);
+			var that = this;
+			window.setTimeout(function(){that.playing = false}, time*1000);
 		},
 		add: function(){
 			var arr = arguments;

@@ -49,7 +49,7 @@ Object.assign(Complex.prototype, {
 		var arr = [{str: '', i: 0}], on = 0;
 		for(var i=0;i<str.length;i++){
 			var _i = str[i] == 'i' || str[i] == 'I', pm = str[i] == '-' || str[i] == '+', md = str[i] == '/' || str[i] == '*';
-			if(!isNaN(str[i]) || str[i] == '.' || _i || (pm && (arr[on].str.length == 0 || str[i-1] == '/' || str[i-1] == '*')) || (md && arr[on].str.length != 0)){
+			if(!isNaN(str[i]) || str[i] == '.' || _i || (pm && (arr[on].str.length == 0 || str[i-1] == '/' || str[i-1] == '*')) || (md && arr[on].str.length != 0 && str[i-1] != 'i')){
 				if(_i) arr[on].i++;
 				else arr[on].str+=str[i];
 			}else if(isNaN(str[i])){
@@ -77,28 +77,34 @@ Object.assign(Complex.prototype, {
 	mag: function(){
 		return Math.pow(this.re*this.re+this.im*this.im,1/2);
 	},
-	add: function(c, d){
-		if(d != undefined){
-			this.re+=c;
-			this.im+=d;
+	add: function(a,b,c,d){
+		var f = this;
+		if(a instanceof Complex){
+			var _c = a._clone();
+			if(b) f = this._clone();
 		}else{
-			this.re+=c.re;
-			this.im+=c.im;
+			var _c = new Complex(a,b,c);
+			if(d) f = this._clone();
 		}
-		return this;
+		f.re+=_c.re;
+		f.im+=_c.im;
+		return f;
 	},
 	get: function(p){
 		this.re = p.re, this.im = p.im;
 	},
-	sub: function(c, d){
-		if(d != undefined){
-			this.re-=c;
-			this.im-=d;
+	sub: function(a,b,c,d){
+		var f = this;
+		if(a instanceof Complex){
+			var _c = a._clone();
+			if(d) f = this._clone();
 		}else{
-			this.re-=c.re;
-			this.im-=c.im;
+			var _c = new Complex(a,b,c);
+			if(d) f = this._clone();
 		}
-		return this;
+		f.re-=_c.re;
+		f.im-=_c.im;
+		return f;
 	},
 	mul: function(c,d,e){
 		var _c = this._clone();
@@ -109,17 +115,19 @@ Object.assign(Complex.prototype, {
 		this.im = _c.re*c.im+_c.im*c.re;
 		return this;
 	},
-	div: function(c,d,e){
+	div: function(a,b,c){
 		var _c = this._clone();
-		if(!(c instanceof Complex)){
-			c = new Complex(c,d,e);
+		if(a instanceof Complex){
+			var d = a._clone();
+		}else{
+			var d = new Complex(a,b,c);
 		}
-		_c.mul(c.inverse());
+		_c.mul(d.inverse());
 		this.get(_c);
 		return this;
 	},
 	pow: function(a, b, c){
-		// z1^z2 = e^(z2*ln(z1))
+		/* z1^z2 = e^(z2*ln(z1)) */
 		if(a instanceof Complex){
 			var _c = a._clone();
 		}else{
@@ -246,19 +254,21 @@ Object.assign(Complex.prototype, {
 			return Math.isPrime(this.im*this.im+this.re*this.re);
 		}
 	},
-	zeta: function(num = 1e5){
-		var sum = new Complex();
-		for(var i=1;i<=num;i++){
-			var n = new Complex(i);
-			sum.add(n.pow(this).inverse());
+	zeta: function(n = 1e6){
+		var sum = new Complex(), _c = this._clone();
+		for(var i=1;i<=n;i++){
+			var _n = new Complex(i);
+			var c = Complex.div(_n, Complex.add(_n, 1).pow(_c)).sub(Complex.sub(_n, _c).div(_n.pow(_c)));
+			sum.add(c);
 		}
-		return sum;
+		return sum.div(_c.sub(1));
 	}
 });
 Object.assign(Complex, {
-	eps: 1e-16,
+	eps: 1e-16, 
 	add: function(){
-		var sum = arguments[0]._clone();
+		if(typeof arguments[0] == 'number') var sum = new Complex(arguments[0]);
+		else var sum = arguments[0]._clone();
 		for(var i=1;i<arguments.length;i++){
 			sum.add(arguments[i]);
 		}
@@ -274,7 +284,7 @@ Object.assign(Complex, {
 	sub: function(a, b){
 		var _a = a._clone();
 		_a.sub(b);
-		return a;
+		return _a;
 	},
 	pow: function(){
 		var a = arguments;
@@ -305,6 +315,10 @@ Object.assign(Complex, {
 			var _c = new Complex(a,b,c);
 			return _c.isPrime();
 		}
+	},
+	div: function(a,b){
+		var _a = a._clone();
+		return _a.div(b);
 	},
 	Re: function(a,b,c){
 		if(a instanceof Complex){
@@ -378,6 +392,15 @@ Object.assign(Complex, {
 		}
 		return _c.ln();
 	},
+	log: function(num, base){
+		if(!(num instanceof Complex)){
+			num = new Complex(num);
+		}
+		if(!(base instanceof Complex)){
+			base = new Complex(base);
+		}
+		return num.ln().div(base.ln());
+	},
 	exp: function(a,b,c){
 		if(a instanceof Complex){
 			var _c = a._clone();
@@ -385,6 +408,107 @@ Object.assign(Complex, {
 			var _c = new Complex(a,b,c);
 		}
 		return _c.exp();
+	},
+	zeta: function(a,b,c){
+		if(a instanceof Complex){
+			var _c = a._clone();
+		}else{
+			var _c = new Complex(a,b,c);
+		}
+		return _c.zeta();
 	}
 });
+function gamma(a,b,c){
+}
+Complex.S = Complex.zeta;
 function z_(a,b,c){return new Complex(a,b,c);}
+/*
+Complex.eval = function(str){
+	if(typeof str == 'number') {
+		return str;
+	}
+	var arr = [{
+		'num': '', 
+		'coefficients': []
+	}];
+	var on = 0;
+	function as(n){return n == '+' || n == '-';}
+	function md(n){return n == '*' || n == '/';}
+	function isVar(n){
+		return (!(n in Complex) && !as(n) && !md(n)) && !isNumber(n);
+	}
+	function isNumber(n){
+		if(n == '') return false;
+		return !isNaN(Number(n)) || n == 'i';
+	}
+	function noNumber(n){
+		for(var i=0;i<n.length;i++){
+			if(isNumber(n[i])) return false;
+		}
+		return true;
+	}
+	for(var j=0;j<str.length;j++){
+		var ri = str[j];
+		console.log(ri);
+		if(isNumber(ri) || noNumber(arr[on].num) || isVar(ri) || md(ri)){
+			if(ri == '-'){
+				arr[on].coefficients.push(-1);
+			}else if(isNumber(ri) || md(ri)){
+				if(ri == 'i'){
+					if(j != 0 && isNumber(str[j-1])){
+						arr[on].num+='*';
+					}
+				}
+				arr[on].num+=(ri);
+			}else if(isVar(ri)){
+				arr[on].coefficients.push(ri);
+			}
+		}else{
+			on++;
+			arr.push({'num': '', 'coefficients': []});
+		}
+	}
+	var vs = [];
+	var answer = '';
+	console.log(arr);
+	for(var j=0;j<arr.length;j++){
+		var o = arr[j];
+		console.log(o.num);
+		//o.num = z_(o.num);
+		o.c = false;
+		o.s = [];
+		for(var p=0;p<o.coefficients.length;p++){
+			var cc = o.coefficients[p];
+			if(cc == -1){
+				o.num.mul(-1);
+			}else if(!(cc in o.s)){
+				o.s.push({v: cc, i: 1});
+				o.c = true;
+			}else if(cc in o.s){
+				o.s[cc].i++;
+				o.c = true;
+			}
+		}
+		if(o.c){
+			vs.push({s: o.s, n: o.num});
+		}
+	}
+	for(var j=0;j<arr.length;j++){
+		var o = arr[j];
+		if(!o.c){
+			answer+=o.num.toString()+' ';
+		}
+	}
+	for(var j=0;j<vs.length;j++){
+		var o = vs[j];
+		var v = '';
+		for(var p=0;p<o.s.length;p++){
+			v+=o.s[p].v;
+			if(o.s[p].i != 1) v+='^'+o.s[p].i;
+		}
+		console.log(o);
+		answer+=o.n.toString()+v;
+	}
+	return answer;
+};
+*/

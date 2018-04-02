@@ -61,7 +61,7 @@ Array.prototype._sort = function(changeObj){
 	}
 	var all = [];
 	var maxD = arr[0][r]*2;
-	var minP = arr[0][p].copy();
+	var minP = arr[0][p]._clone();
 	for (var i = arr.length - 1; i >= 1; i--) {
 		var c = arr[i];
 		if(c[r]>maxD/2) maxD = c[r]*2;
@@ -136,6 +136,7 @@ Math.isPrime = function(num){
 	for(var i=2;i<=Math.sqrt(num);i++){
 		if(ii(num/i)) return false;
 	}
+	window._primes();
 	return true;
 };
 (function(gl){
@@ -336,7 +337,7 @@ Object.assign(Point.prototype, {
 		}
 		return this;
 	},
-	copy: function(){
+	_clone: function(){
 		return new this.constructor(this.x,this.y);
 	},
 	scale: function(s){
@@ -413,7 +414,7 @@ Object.assign(Point.prototype, {
 		return this;
 	},
 	normalized: function(){
-		var v = this.copy(), m = this.mag();
+		var v = this._clone(), m = this.mag();
 		v.x/=m;
 		v.y/=m;
 		return v;
@@ -440,7 +441,7 @@ Object.assign(Point.prototype, {
 	},
 	rotateAround: function(x,y,a){
 		if(a == undefined && x instanceof Point){
-			var p = x.copy();
+			var p = x._clone();
 			a = y;
 			this.sub(p);
 			this.rotate(a);
@@ -518,12 +519,12 @@ Object.assign(Point, {
 		return new Point(a.x-b.x,a.y-b.y);
 	},
 	scale: function(a,s){
-		var a = a.copy();
+		var a = a._clone();
 		a.scale(s);
 		return a;
 	},
 	mult: function(a,b){
-		var a = a.copy();
+		var a = a._clone();
 		a.mult(b);
 		return a;
 	},
@@ -537,7 +538,7 @@ Object.assign(Point, {
 		return a.mag();
 	},
 	normalize: function(a){
-		var b = a.copy();
+		var b = a._clone();
 		return b.normalize();
 	},
 	angle: function(v){
@@ -547,13 +548,13 @@ Object.assign(Point, {
 		return a.equals(b);
 	},
 	floor: function(a){
-		return a.copy().floor();
+		return a._clone().floor();
 	},
 	round: function(a){
-		return a.copy().round();
+		return a._clone().round();
 	},
 	ceil: function(a){
-		return a.copy().ceil();
+		return a._clone().ceil();
 	},
 	inverse: function(a){
 		return new Point(1/a.x,1/a.y);
@@ -637,7 +638,7 @@ Object.assign(Draw.prototype, {
 		}
 	},
 	fillSetA: function(){
-		// copy of this.strokeSetA()
+		// _clone of this.strokeSetA()
 		function t0(n){
 			var a0 = Math.change(n,10,16);
 			if(n<16) a0 = "0"+a0;
@@ -925,7 +926,7 @@ function Button(x,y,w,h,t,f){
 Button.prototype = {
 	in: function(x,y){
 		if(x instanceof Point){
-			var _p = x.copy();
+			var _p = x._clone();
 		}else{
 			var _p = new Point(x,y);
 		}
@@ -977,9 +978,6 @@ function SlideShow(space, tool){
 	var move = this.move, running = this.running;
 	function run(event){
 	}
-	space.addEventListener('mousedown', frun, false);
-	space.addEventListener('keydown', frun, false);
-
 	this.transStyles = [];
 }
 SlideShow.transitionsStyles = {
