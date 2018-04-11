@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html>
+<style type="text/css">
+	body {
+		text-align: center;
+		font-family: monospace;
+	}
+</style>
+<audio id="a1" src="sounds/Croatian_Rhapsody_Maksim.mp3"></audio>
+<script type="text/javascript">
+	var audio = document.getElementById('a1');
+	audio.preload = 'auto';
+	var started = false;
+	audio.addEventListener('loadeddata', function(){
+		function play(){audio.play();started = true;}
+		audio.addEventListener("play", function(){
+			window.removeEventListener("mousedown", play, false);
+			window.removeEventListener("touchstart", play, false);
+			window.removeEventListener("keydown", play, false);
+		},false);
+		window.addEventListener("mousedown", play, false);
+		window.addEventListener("touchstart", play, false);
+		window.addEventListener("keydown", play, false);
+	}, false);
+</script>
+<head>
+	<title>
+		Dancing Line Test
+	</title>
+</head>
+<body>
+	<div id="container"></div>
+</body>
+<script src="./libs/three.js-master/build/three.js"></script>
+<script src="./libs/DL.js"></script>
+<script type="text/javascript">
+	DL.init();
+	function ac(){
+		if(audio.currentTime>audio.duration-11){
+			audio.volume+=-audio.volume*0.16;
+		}else{
+			audio.volume = 1;
+		}
+		window.setTimeout(ac, 50);
+	}
+	ac();
+	function run(){
+		renderer.render(scene, camera);
+		window.setTimeout(run, 5);
+	}
+	run();
+</script>
+</html>

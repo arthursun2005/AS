@@ -7,269 +7,146 @@ function createCanvas(id, w = window.innerWidth, h = window.innerHeight, sl){
 	}
 	var ele = document.createElement("canvas");
 	var t = window.innerHeight-h;
-	ele.style = sl || "border: dashed 1px #000000;margin-top: "+t/2+"px";
+	ele.style = sl || "text-align: center;border: dashed 1px #000000;margin-top: "+t/2+"px";
 	ele.width = w, ele.height = h;
 	ele.id = id;
 	document.body.appendChild(ele);
 	ele.style.cursor = 'crosshair';
 	return ele;
 }
-Array.prototype._clone = function(){
-	var arr = [];
-	for(var i=0;i<this.length;i++){
-		var o = this[i];
-		if(typeof o == 'object'){
-			if(Array.isArray(o)){
-				arr[i] = o._clone();
-			}else{
-				arr[i] = o.clone();
-			}
-		}else{
-			arr[i] = this[i];
-		}
-	}
-	return arr;
-};
-Object.prototype.clone = function(){
-	var obj = {}, me = this;
-	for(var key in me){
-		var o = me[i];
-		if(typeof o == 'object'){
-			if(Array.isArray(o)){
-				arr[i] = o._clone();
-			}else{
-				arr[i] = o.clone();
-			}
-		}else{
-			obj[key] = this[key];
-		}
-	}
-	return obj;
-};
-Array.prototype._sort = function(changeObj){
-	// using my method to decrease time complexity
-	var arr = this;
-	if(arr.length<1) return null;
-	var r = 'r', p = 'p';
-	for(var key in changeObj){
-		switch(key){
-			case 'p': p = changeObj[key];
-			break;
-			case 'r': r = changeObj[key];
-			break;
-		}
-	}
-	var all = [];
-	var maxD = arr[0][r]*2;
-	var minP = arr[0][p]._clone();
-	for (var i = arr.length - 1; i >= 1; i--) {
-		var c = arr[i];
-		if(c[r]>maxD/2) maxD = c[r]*2;
-		if(c[p].x<minP.x) minP.x = c[p].x;
-		if(c[p].y<minP.y) minP.y = c[p].y;
-	}
-	for (var i = arr.length - 1; i >= 0; i--) {
-		var c = arr[i];
-		var y = Math.floor((c[p].y-minP.y)/maxD);
-		var x = Math.floor((c[p].x-minP.x)/maxD);
-		if(!all[y]) all[y] = [];
-		if(!all[y][x]) all[y][x] = [];
-		all[y][x].push({obj: c, id: i});
-	}
-	return {all: all, minP: minP, maxD: maxD, arr: arr, p: p};
-};
-Array._sortLoop = function(f, obj, times = 3){
-	if(!obj) return false;
-	var all = obj.all, minP = obj.minP, maxD = obj.maxD, arr = obj.arr, p = obj.p;
-	times = Math.round(times);
-	if(times%2 == 0){
-		// is even
-		var a = times/2-1;
-		var b = times/2;
-	}else{
-		// is odd
-		var a = Math.floor(times/2);
-		var b = a;
-	}
-	for (var i = arr.length - 1; i >= 0; i--) {
-		var c = arr[i];
-		if(times%2 == 0){
-			var y = Math.floor((c[p].y-minP.y-maxD/2)/maxD);
-			var x = Math.floor((c[p].x-minP.x-maxD/2)/maxD);
-		}else{
-			var y = Math.floor((c[p].y-minP.y)/maxD);
-			var x = Math.floor((c[p].x-minP.x)/maxD);
-		}
-		for(var py=y-a;py<=y+b;py++){
-			if(!all[py]) continue;
-			for(var px=x-a;px<=x+b;px++){
-				if(!all[py][px]) continue;
-				if(y>py && x>px) continue;
-				for (var j = all[py][px].length - 1; j >= 0; j--) {
-					var j0 = all[py][px][j];
-					if(i == j0.id) continue;
-					if(f) f({obj1: c, obj2: j0.obj, id1: i, id2: j0.id, all: all, arr: arr, minP: minP, maxD: maxD});
-				}
-			}
-		}
-	}
-};
-Math.dx = 1e-6;
-Math.integral = function(f,a,b){
-	var sum = 0;
-	for(var i=a;i<b;i+=this.dx) sum+=this.dx*f(i);
-	return sum;
-};
-Math.mag = function(x,y){
-	return this.pow(x*x+y*y,1/2);
-};
-Math.sum = function(a,b,e) {
-	var num = 0;
-	for(var i=a;i<b;i++){num+=eval(e);}
-	return num;
-};
-Math.isPrime = function(num){
-	num = Math.floor(Math.abs(num));
-	function ii(n){
-		return (Math.round(n)-n == 0) ? true : false;
-	}
-	for(var i=2;i<=Math.sqrt(num);i++){
-		if(ii(num/i)) return false;
-	}
-	window._primes();
-	return true;
-};
-(function(gl){
-	gl._primes = function(){
-		var p = [2];
-		for(var i=0;i<1e4-1;i++){
-			var g = p[p.length-1];
-			g++;
-			while(!Math.isPrime(g)){g++;}
-			p.push(g);
-		}
-		function ii(n){
-			return (Math.abs(Math.round(n)-n)<Math.dx) ? true : false;
-		}
-		gl.primes = p;
-		function c(){
-			gl.Math.isPrime = function(num){
-				num = Math.floor(Math.abs(num));
-				if(Math.abs(num)<=1) return false;
-				var n = Math.sqrt(num);
-				for(var i=0;i<n;i++){
-					if(n>p[p.length-1]){
-						if(ii(num/i)) return false;
-					}else{
-						if(ii(num/p[i]) && num != p[i]) return false;
-					}
-				}
-				return true;
-			};
-		}
-		c();
-		for(var i=0;i<9e4;i++){
-			var g = p[p.length-1];
-			g++;
-			while(!Math.isPrime(g)){g++;}
-			p.push(g);
-		}
-		gl.primes = p;
-		c();
-	};
-})(this);
-function primeFactor(n){
-	var i = 2;
-	var factors = [];
-	while(n>1){
-		if(Math.isInt(n/i)){
-			factors.push(i);
-			n/=i;
-		}else{
-			i++;
-			while(!Math.isPrime(i)) i++;
-		}
-	}
-	return factors;
-}
-Math.roundToZero = function(n){
-	return n>0 ? this.floor(n) : this.ceil(n); 
-}
-Math.roundAwayZero = function(n){
-	return n>0 ? this.ceil(n) : this.floor(n);
-}
+Math.eps = 1e-16;
+Math.roundToZero = function(n){return n>0 ? this.floor(n) : this.ceil(n); }
+Math.roundAwayZero = function(n){return n>0 ? this.ceil(n) : this.floor(n);}
 Math.isInt = function(n){return (this.round(Number(n)) == Number(n));};
 Math.change = function(num,a,b){
-	var n1 = parseInt(num,a);
+	var n1 = parseFloat(num,a);
 	return n1.toString(b);
 };
-function toHexColor(r,g,b,a = 255){
-	var _a = arguments;
-	if(r == undefined){
-		return '#000000';
-	}else if(g == undefined && r != undefined){
-		if(typeof r == 'string'){
-			return r;
-		}else if(typeof r == 'number'){
-			g = r;
-			b = r;
-			a = 255;
-		}
-	}else if(g != undefined && b == undefined && typeof _a[0] == 'number'&& typeof _a[1] == 'number'){
-		var _g = g;
-		g = r;
-		b = r;
-		a = _g;
-	}
-	r = constrain(r,0,255);
-	g = constrain(g,0,255);
-	b = constrain(b,0,255);
-	a = constrain(a,0,255);
-	function t0(n){
-		var a0 = Math.change(n,10,16);
-		if(n<16) a0 = "0"+a0;
-		return a0;
-	}
-	return "#"+t0(r)+t0(g)+t0(b)+t0(a);
-}
-function mixColors(a, b, k){
-	function toObj(str){
-		str = str.substring(1,str.length);
-		r = Math.change(str.substring(0,2), 16, 10);
-		g = Math.change(str.substring(2,4), 16, 10);
-		_b = Math.change(str.substring(4,6), 16, 10);
-		if(str.length<7){
-			a = 255;
-		}else{
-			a = Math.change(str.substring(6,8), 16, 10);
-		}
-		return {r: Number(r),g: Number(g),b: Number(_b),a: Number(a)};
-	}
-	var o1 = toObj(a), o2 = toObj(b);
-	var diff = {
-		r: o2.r-o1.r, 
-		g: o2.g-o1.g, 
-		b: o2.b-o1.b, 
-		a: o2.a-o1.a, 
-	};
-	o1.r+=Math.roundAwayZero(diff.r*k), o1.g+=Math.roundAwayZero(diff.g*k), o1.b+=Math.roundAwayZero(diff.b*k), o1.a+=Math.roundAwayZero(diff.a*k);
-	o2.r-=Math.roundAwayZero(diff.r*k), o2.g-=Math.roundAwayZero(diff.g*k), o2.b-=Math.roundAwayZero(diff.b*k), o2.a-=Math.roundAwayZero(diff.a*k);
-	a3 = toHexColor(o1.r,o1.g,o1.b,o1.a);
-	b3 = toHexColor(o2.r,o2.g,o2.b,o2.a);
-	return {a:a3,b:b3};
-}
-function hexToNumber(str){
-	if(str.length<9) str[7] = 'f', str[8] = 'f';
-	return [str.substring(1,3), str.substring(3,5), str.substring(5,7), str.substring(7,9)];
-}
 function constrain(value, min, max){
-	if(value<=min) return min;
-	if(value>=max) return max;
-	else return value;
+	if(value<=min){return min;}
+	if(value>=max){return max;}
+	else{return value;}
 }
-function map(value, l1, h1, l2, h2) {
-	return l2+(h2-l2)*(value-l1)/(h1-l1);
-}
+function Color(a,b,c,d){return this.set(a,b,c,d);}
+Object.assign(Color.prototype, {
+	get: function(a){
+		return this._set(a.r, a.b, a.g, a.a);
+	},
+	set: function(a,b,c,d){
+		if(a == undefined){
+			return this._set(0,0,0,255);
+		}else if(b == undefined){
+			if(a instanceof Color){
+				return this.get(a);
+			}else if(typeof a == 'number'){
+				return this._set(a,a,a,255);
+			}else if(typeof a == 'string'){
+				return this.setFromString(a);
+			}else if(typeof a == 'object'){
+				return this.setFromObj(a);
+			}
+		}else if(c == undefined){
+			return this._set(a,a,a,b);
+		}else if(d == undefined){
+			return this._set(a,b,c,255);
+		}else if(d != undefined){
+			return this._set(a,b,c,d);
+		}
+	},
+	_set: function(a,b,c,d){
+		this.r = a, this.g = b, this.b = c, this.a = d;
+		return this;
+	},
+	setFromString: function(str){
+		if(str[0] == '#'){str = str.substring(1,str.length);}
+		this.r = Number('0x'+str.substring(0,2));
+		this.g = Number('0x'+str.substring(2,4));
+		this.b = Number('0x'+str.substring(4,6));
+		if(str.length>6){this.a = Number('0x'+str.substring(0,2));}
+		else{this.a = 255;}
+		this._c();
+		return this;
+	},
+	setFromObj: function(obj){
+		this.r = obj.r;
+		this.g = obj.g;
+		this.b = obj.b;
+		this.a = obj.a;
+		this._c();
+		return this;
+	},
+	getCssString: function(){
+		function t0(n){n = Math.round(Math.abs(n)); var a0 = Math.change(n,10,16); if(n<16){a0 = "0"+a0;} return a0; }
+		return "#"+t0(this.r)+t0(this.g)+t0(this.b)+t0(this.a);
+	},
+	getValue: function(){
+		function t0(n){n = Math.round(Math.abs(n)); var a0 = Math.change(n,10,16); if(n<16){a0 = "0"+a0;} return a0; }
+		return Number('0x'+t0(this.r)+t0(this.g)+t0(this.b)+t0(this.a));
+	},
+	getObj: function(){
+		return {
+			r: this.r, 
+			g: this.g, 
+			b: this.b, 
+			a: this.a
+		};
+	},
+	_clone: function(){
+		return new this.constructor(this);
+	},
+	lerp: function(c, u){
+		this.r+=(c.r-this.r)*u;
+		this.g+=(c.g-this.g)*u;
+		this.b+=(c.b-this.b)*u;
+		this.a+=(c.a-this.a)*u;
+		this._c();
+		return this;
+	},
+	_c: function(){
+		this.r = constrain(this.r, 0, 255);
+		this.g = constrain(this.g, 0, 255);
+		this.b = constrain(this.b, 0, 255);
+		this.a = constrain(this.a, 0, 255);
+	},
+	add: function(a,b,c,d){
+		var _c = new Color(a,b,c,d);
+		this.r+=_c.r;
+		this.g+=_c.g;
+		this.b+=_c.b;
+		this.a+=_c.a;
+		this._c();
+		return this;
+	},
+	sub: function(a,b,c,d){
+		var _c = new Color(a,b,c,d);
+		this.r-=_c.r;
+		this.g-=_c.g;
+		this.b-=_c.b;
+		this.a-=_c.a;
+		this._c();
+		return this;
+	},
+	scale: function(scl){
+		this.r*=scl;
+		this.g*=scl;
+		this.b*=scl;
+		this.a*=scl;
+		this._c();
+		return this;
+	},
+	mix: function(b, u){
+		var _this = this._clone();
+		this.lerp(b, u);
+		b.lerp(_this, u);
+	}
+});
+Object.assign(Color, {
+	random: function(a){
+		if(a){return new Color(randomFloat(0,255), randomFloat(0,255), randomFloat(0,255), randomFloat(0,255));}
+		else{return new Color(randomFloat(0,255), randomFloat(0,255), randomFloat(0,255), 255);}
+	}
+});
+function map(value, l1, h1, l2, h2) {return l2+(h2-l2)*(value-l1)/(h1-l1);}
 function dist(x1,y1,x2,y2){
 	if(arguments.length == 2){
 		return Math.sqrt(Math.pow(y1.x-x1.x,2)+Math.pow(y1.y-x1.y,2));
@@ -279,56 +156,12 @@ function dist(x1,y1,x2,y2){
 function randomFloat(a, b){
 	return a+Math.random()*(b-a);
 }
-function Timer(){
-	var a = arguments;
-	this.createByArray(a);
-}
-Timer.prototype = {
-	create: function(){
-		var a = arguments;
-		if(a.length%2 != 0){
-			console.warn('An odd number of arguments');
-			return;
-		}
-		for (var i = a.length - 1; i >= 1; i-=2) {
-			this._c(a[i-1], a[i]);
-		}
-	},
-	createByArray: function(arr){
-		if(arr.length%2 != 0){
-			console.warn('An odd number of values');
-			return;
-		}
-		for (var i = arr.length - 1; i >= 1; i-=2) {
-			this._c(arr[i-1], arr[i]);
-		}
-	},
-	_c: function(a,b){
-		if(this[a]) this[a].d = b;
-		else this[a] = {t: 1, d: b};
-	},
-	is: function(a){
-		return this[a].t == 0;
-	},
-	update: function(){
-		for(var key in this){
-			this[key].t = (this[key].t+1)%this[key].d;
-		}
-	}
-};
 function Point(x,y){
-	if(!y && x instanceof Point){
-		this.x = x.x;
-		this.y = x.y;
-	}else{
-		this.x = x || 0;
-		this.y = y || 0;
-	}
-	return this;
+	return this.set(x,y);
 }
 Object.assign(Point.prototype, {
 	set: function(x,y){
-		if(!y && x instanceof Point){
+		if(y == undefined && x instanceof Point){
 			this.x = x.x;
 			this.y = x.y;
 		}else{
@@ -358,8 +191,8 @@ Object.assign(Point.prototype, {
 		return this.x*v.x+this.y*v.y;
 	},
 	mul: function(v){
-		this.x = this.x*v.x+this.y*v.y,
-		this.y = this.x*v.y+this.y*v.x;
+		this.x = this.x*v.x+this.x*v.y;
+		this.y = this.y*v.x+this.y*v.y;
 		return this;
 	},
 	add: function(v,w){
@@ -430,7 +263,7 @@ Object.assign(Point.prototype, {
 		return this;
 	},
 	equals: function(v){
-		return ((v.x == this.x) && (v.y == this.y));
+		return Math.abs(v.x-this.x)<Math.eps && Math.abs(v.y-this.y)<Math.eps;
 	},
 	rotate: function(a){
 		var a0 = this.angle()+a;
@@ -493,7 +326,7 @@ Object.assign(Point.prototype, {
 			if(b == undefined){
 				a = Math.abs(a);
 				var n = this.normalized().scale(a);
-				if(this.mag()>a) this.x = n.x, this.y = n.y;
+				if(this.mag()>a){this.x = n.x, this.y = n.y;}
 				return;
 			}
 			this.x = constrain(this.x,a,b);
@@ -562,8 +395,9 @@ Object.assign(Point, {
 	minus: function(a){
 		return new Point(-a.x,-a.y);
 	},
-	polar: function(r,a){
-		return new Point(Math.cos(a)*r,Math.sin(a)*r);
+	polar: function(r,a,p){
+		if(p == undefined){p = new Point();}
+		return new Point(Math.cos(a)*r+p.x,Math.sin(a)*r+p.y);
 	},
 	random: function(a,b,c,d){
 		var p = new Point();
@@ -573,8 +407,8 @@ Object.assign(Point, {
 });
 function Draw(space){
 	this.space = space;
-	this.fillColor = "#ffffffff";
-	this.strokeColor = "#000000ff";
+	this.fillColor = new Color(255);
+	this.strokeColor = new Color();
 	this.lineWidth = 1;
 
 	this._fill = true;
@@ -613,48 +447,11 @@ Object.assign(Draw.prototype, {
 	},
 	stroke: function(r,g,b,a){
 		this._stroke = true;
-		this.strokeColor = toHexColor(r, g, b, a);
+		this.strokeColor.set(r,g,b,a);
 	},
 	fill: function(r,g,b,a){
 		this._fill = true;
-		this.fillColor = toHexColor(r, g, b, a);
-	},
-	strokeSetA: function(obj){
-		function t0(n){
-			var a0 = Math.change(n,10,16);
-			if(n<16) a0 = "0"+a0;
-			return a0;
-		}
-		if(typeof obj == 'string'){
-			this.strokeColor[7] = obj[0] || "f";
-			this.strokeColor[8] = obj[1] || "f";
-		}else if(typeof obj == 'number'){
-			obj = constrain(obj, 0, 255);
-			var str = t0(obj);
-			this.strokeColor[7] = str[0];
-			this.strokeColor[8] = str[1];
-		}else{
-			console.log('What did you enter?');
-		}
-	},
-	fillSetA: function(){
-		// _clone of this.strokeSetA()
-		function t0(n){
-			var a0 = Math.change(n,10,16);
-			if(n<16) a0 = "0"+a0;
-			return a0;
-		}
-		if(typeof obj == 'string'){
-			this.fillColor[7] = obj[0] || "f";
-			this.fillColor[8] = obj[1] || "f";
-		}else if(typeof obj == 'number'){
-			obj = constrain(obj, 0, 255);
-			var str = t0(obj);
-			this.fillColor[7] = str[0];
-			this.fillColor[8] = str[1];
-		}else{
-			console.log('What did you enter?');
-		}
+		this.fillColor.set(r,g,b,a);
 	},
 	translate: function(x,y){
 		if(!y && x instanceof Point){
@@ -719,13 +516,13 @@ Object.assign(Draw.prototype, {
 
 	},
 	s1: function(){
-		for(var i=this.tas.length-1;i>=0;i--){
+		for(var i=0;i<this.tas.length;i++){
 			if(this.tas[i].type == 'translate'){
-				this.d0.translate(-this.tas[i].x, -this.tas[i].y);
+				this.d0.translate(this.tas[i].x, this.tas[i].y);
 			}else if(this.tas[i].type == 'rotate'){
-				this.d0.rotate(-this.tas.a);
+				this.d0.rotate(this.tas[i].a);
 			}else if(this.tas[i].type == 'scale'){
-				this.d0.scale(1/this.tas[i].x, 1/this.tas[i].y);
+				this.d0.scale(this.tas[i].x, this.tas[i].y);
 			}
 		}
 	},
@@ -734,7 +531,7 @@ Object.assign(Draw.prototype, {
 			if(this.tas[i].type == 'translate'){
 				this.d0.translate(-this.tas[i].x, -this.tas[i].y);
 			}else if(this.tas[i].type == 'rotate'){
-				this.d0.rotate(-this.tas.a);
+				this.d0.rotate(-this.tas[i].a);
 			}else if(this.tas[i].type == 'scale'){
 				this.d0.scale(1/this.tas[i].x, 1/this.tas[i].y);
 			}
@@ -745,7 +542,7 @@ Object.assign(Draw.prototype, {
 		d.beginPath();
 		this.s0();
 		this.d.lineWidth = this.lineWidth;
-		this.d.strokeStyle = this.strokeColor;
+		this.d.strokeStyle = this.strokeColor.getCssString();
 		if(arguments.length == 2 && x1 instanceof Point && y1 instanceof Point){
 			d.moveTo(x1.x,x1.y);
 			d.lineTo(y1.x,y1.y);
@@ -753,44 +550,21 @@ Object.assign(Draw.prototype, {
 			d.moveTo(x1,y1);
 			d.lineTo(x2,y2);
 		}
-		if(this._stroke) d.stroke();
+		if(this._stroke){d.stroke();}
 		this.f0();
 	},
 	rect: function(x,y,w,h,r){
 		if(!r){
-			if(!this._fill && this._stroke){
-				this.d.beginPath();
-				this.s0();
-				this.d.strokeStyle = this.strokeColor;
-				if(this.rectAlign == "center") this.d.translate(-w/2,-h/2);
-				this.d.rect(x,y,w,h);
-				if(this.rectAlign == "center") this.d.translate(w/2,h/2);
-				this.d.stroke();
-				this.f0();
-			}
-			if(!this._stroke && this._fill){
-				this.d.beginPath();
-				this.s0();
-				if(this.rectAlign == "center") this.d.translate(-w/2,-h/2);
-				this.d.fillStyle = this.fillColor;
-				this.d.fillRect(x,y,w,h);
-				this.d.stroke();
-				if(this.rectAlign == "center") this.d.translate(w/2,h/2);
-				this.f0();
-			}
-			if(this._stroke && this._fill){
-				this.d.beginPath();
-				this.s0();
-				if(this.rectAlign == "center") this.d.translate(-w/2,-h/2);
-				this.d.fillStyle = this.fillColor;
-				this.d.strokeStyle = this.strokeColor;
-				this.d.rect(x,y,w,h);
-				this.d.fillRect(x,y,w,h);
-				this.d.stroke();
-				this.d.fill();
-				if(this.rectAlign == "center") this.d.translate(w/2,h/2);
-				this.f0();
-			}
+			this.d.beginPath();
+			this.s0();
+			this.d.strokeStyle = this.strokeColor.getCssString();
+			this.d.fillStyle = this.fillColor.getCssString();
+			if(this.rectAlign == "center") this.d.translate(-w/2,-h/2);
+			this.d.rect(x,y,w,h);
+			if(this.rectAlign == "center") this.d.translate(w/2,h/2);
+			if(this._stroke){this.d.stroke();}
+			if(this._fill){this.d.fill();}
+			this.f0();
 		}else if(r){
 			this.d.beginPath();
 			this.s0();
@@ -805,10 +579,10 @@ Object.assign(Draw.prototype, {
 			this.d.lineTo(x, y+r);
 			this.d.quadraticCurveTo(x,y,x+r,y);
 			this.d.lineWidth = this.lineWidth;
-			this.d.fillStyle = this.fillColor;
-			this.d.strokeStyle = this.strokeColor;
-			if(this._stroke) this.d.stroke();
-			if(this._fill) this.d.fill();
+			this.d.fillStyle = this.fillColor.getCssString();
+			this.d.strokeStyle = this.strokeColor.getCssString();
+			if(this._stroke){this.d.stroke();}
+			if(this._fill){this.d.fill();}
 			if(this.rectAlign == "center") this.d.translate(w/2,h/2);
 			this.f0();
 		}
@@ -819,58 +593,54 @@ Object.assign(Draw.prototype, {
 		this.d.ellipseMode = 'center';
 		this.d.ellipse(x,y,w,h,0,a,b);
 		this.d.lineWidth = this.lineWidth;
-		this.d.fillStyle = this.fillColor;
-		this.d.strokeStyle = this.strokeColor;
-		if(this._stroke) this.d.stroke();
-		if(this._fill) this.d.fill();
+		this.d.fillStyle = this.fillColor.getCssString();
+		this.d.strokeStyle = this.strokeColor.getCssString();
+		if(this._stroke){this.d.stroke();}
+		if(this._fill){this.d.fill();}
 		this.f0();
 	},
 	triangle: function(x1,y1,x2,y2,x3,y3){
 		this.d.beginPath();
 		this.s0();
 		this.d.lineWidth = this.lineWidth;
-		this.d.strokeStyle = this.strokeColor;
-		this.d.fillStyle = this.fillColor;
+		this.d.strokeStyle = this.strokeColor.getCssString();
+		this.d.fillStyle = this.fillColor.getCssString();
 		this.d.moveTo(x1,y1); this.d.lineTo(x2,y2);
 		this.d.moveTo(x2,y2); this.d.lineTo(x3,y3);
 		this.d.moveTo(x3,y3); this.d.lineTo(x1,y1);
-		if(this._stroke) this.d.stroke();
-		if(this._fill) this.d.fill();
+		if(this._stroke){this.d.stroke();}
+		if(this._fill){this.d.fill();}
 		this.f0();
 	},
 	quad: function(x1,y1,x2,y2,x3,y3,x4,y4){
 		this.d.beginPath();
 		this.s0();
 		this.d.lineWidth = this.lineWidth;
-		this.d.strokeStyle = this.strokeColor;
-		this.d.fillStyle = this.fillColor;
+		this.d.strokeStyle = this.strokeColor.getCssString();
+		this.d.fillStyle = this.fillColor.getCssString();
 		this.d.moveTo(x1,y1); this.d.lineTo(x2,y2);
 		this.d.moveTo(x2,y2); this.d.lineTo(x3,y3);
 		this.d.moveTo(x3,y3); this.d.lineTo(x4,y4);
 		this.d.moveTo(x4,y4); this.d.lineTo(x1,y1);
-		if(this._stroke) this.d.stroke();
-		if(this._fill) this.d.fill();
+		if(this._stroke){this.d.stroke();}
+		if(this._fill){this.d.fill();}
 		this.f0();
 	},
 	text: function(t,x,y){
 		this.d.beginPath();
 		this.s0();
-		this.d.fillStyle = this.fillColor;
+		this.d.fillStyle = this.fillColor.getCssString();
 		this.d.textAlign = this._textAlign;
 		this.d.font = this._textSize+"px "+this._font;
-		if(arguments.length == 2){
-			this.d.fillText(t, x.x, x.y);
-		}else{
-			this.d.fillText(t, x, y);
-		}
-		if(this._stroke) this.d.stroke();
-		if(this._fill) this.d.fill();
+		if(arguments.length == 2){this.d.fillText(t, x.x, x.y);}
+		else{this.d.fillText(t, x, y);}
+		if(this._fill){this.d.fill();}
 		this.f0();
 	},
 	strokeText: function(t,x,y){
 		this.d.beginPath();
 		this.s0();
-		this.d.strokeStyle = this.strokeColor;
+		this.d.strokeStyle = this.strokeColor.getCssString();
 		this.d.textAlign = this._textAlign;
 		this.d.font = this._textSize+"px "+this._font;
 		if(arguments.length == 2){
@@ -878,7 +648,7 @@ Object.assign(Draw.prototype, {
 		}else{
 			this.d.strokeText(t, x, y);
 		}
-		if(this._stroke) this.d.stroke();
+		if(this._stroke){this.d.stroke();}
 		this.f0();
 	},
 	beginShape: function(){
@@ -893,23 +663,19 @@ Object.assign(Draw.prototype, {
 			var x = _x.x;
 		}
 		if(this.d1){
-			this.d0.moveTo(this.last.x,this.last.y);
 			this.d0.lineTo(x,y);
-			this.last = new Point(x,y);
 		}else{
 			this.d0.moveTo(x,y);
 			this.d1 = true;
-			this.last = new Point(x,y);
 		}
 	},
 	endShape: function(){
 		this.d0.lineWidth = this.lineWidth;
-		this.d0.strokeStyle = this.strokeColor;
-		this.d0.fillStyle = this.fillColor;
-		if(this._stroke) this.d.stroke();
-		if(this._fill) this.d.fill();
+		this.d0.strokeStyle = this.strokeColor.getCssString();
+		this.d0.fillStyle = this.fillColor.getCssString();
+		if(this._stroke){this.d0.stroke();}
+		if(this._fill){this.d0.fill();}
 		this.f1();
-		this.d1 = false;
 	}
 });
 function Button(x,y,w,h,t,f){
@@ -920,7 +686,7 @@ function Button(x,y,w,h,t,f){
 	this.f = f;
 	this.a = 1;
 	this.ac = 0;
-	this.c = '#00ddeeff';
+	this.c = new Color(20,220,210);
 	window.addEventListener('mousedown', this.f, false);
 }
 Button.prototype = {
@@ -975,7 +741,7 @@ function SlideShow(space, tool){
 	this.running = false;
 	this.finished = false;
 	this.tool = tool;
-	var move = this.move, running = this.running;
+	var me = this;
 	function run(event){
 	}
 	this.transStyles = [];

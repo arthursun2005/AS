@@ -2,14 +2,12 @@
 	var Music = {};
 	Music.context = new (window.AudioContext || webkitAudioContext)();
 	Music.step = Math.pow(2,1/12);
-	Music.noteNames = ['A','B','C','D','E','F','G'];
-	Music.tt = function(a,b){
-		return 240/a*b;
-	};
+	Music.noteNames = ['C','D','E','F','G','A','B'];
+	Music.tt = function(a,b){return 240/a*b;};
 	Music.nameToDynamics = function(name, L = 1/9){
 		var d = L;
 		for(var i=name.length-1;i>=0;i--){
-			if(name[i] == 'm') d+=(L/1.8-d)*1/1.6;
+			if(name[i] == 'm') d+=(L/1.8-d)*1/1.3;
 			else if(name[i] == 'f') d+=(1-d)*1/3.5;
 			else if(name[i] == 'p') d+=(-d)*1/3;
 		}
@@ -21,6 +19,22 @@
 			if(name[i] != 'p' && name[i] != 'f' && name[i] != 'm') return false;
 		}
 		return true;
+	};
+	global.beep = function(arr){
+		var a = arr;
+		if(!Array.isArray(a)){console.log('Enter a single array');return;}
+		for(var i=0;i<a.length;i++){
+			if(typeof a[i] == 'object'){
+				var n = new Music.Note();
+				n.name = a[i].name != undefined ? a[i].name : 'A';
+				if(a[i].name[0] == '.'){n._s = 0.1;}
+				n.info.loudness = Music.isValidDynamicName(a[i].dynamic) ? Music.nameToDynamics(a[i].dynamic, 1/7) : 1/7;
+				n.duration = a[i].duration != undefined ? a[i].duration : 1/4;
+				n.oscillator.type = a[i].type != undefined ? a[i].type : 'triangle';
+				var pt = a[i].playTime != undefined ? a[i].playTime : 0;
+				n.play(pt);
+			}
+		}
 	};
 	Music.noteToFrequency = function(name, A = 440){
 		var note = '', octave = 0, halfNotes = 0, on = 0, gg = 0;
@@ -62,7 +76,7 @@
 	};
 	Music.Note = function(score){
 		this.duration = 1/4;
-		this.info = {loudness: 1/9, texture: 50};
+		this.info = {loudness: 1/7, texture: 50};
 		// all time in beats
 		this.name = 'C5';
 		this.score = score;
@@ -76,7 +90,7 @@
 		this.oscillator.type = 'triangle';
 		this._s = this.score != undefined ? this.score._s : 0.86;
 		this.f = null;
-		this.T = this.score != undefined ? this.score.tempo : 180;
+		this.T = this.score != undefined ? this.score.tempo : 148;
 	};
 	Object.assign(Music.Note.prototype, {
 		play: function(time = 0){ // in beats
@@ -95,6 +109,10 @@
 				if(that.f) that.f();
 			};
 			window.setTimeout(that.fp, Music.tt(this.T,time)*1000);
+		},
+		stop: function(){
+			this.context.suspend();
+			this.gain.gain.setTargetAtTime(0, this.context.currentTime, 0);
 		}
 	});
 	Music.Score = function(){
@@ -102,196 +120,236 @@
 		this.tempo = 180;
 		this.A = 440;
 		this.notes = [];
-		this.L = 1/9;
-		this._st = 0.56;
+		this.L = 1/7;
+		this._st = 0.25;
 		this._s = 0.86;
 		this.playing = false;
+		this.looping = false;
+		this.scl = 1;
+		this.durationMode = 1/4;
+		this.on = 0;
+		this.draws = [];
+		this.x = 0;
+		this.iner = 4;
+		this.onst = false;
 	};
 	Object.assign(Music.Score.prototype, {
 		play: function(){
+			if(this.notes.length<1){return;}
+			this.notes.sort(function(b, a){return b.wait-a.wait});
 			var time = 0;
 			for(var i=0;i<this.notes.length;i++){
 				this.notes[i].note.play(this.notes[i].wait);
-				if(i>0) time+=(Music.tt(this.notes[i].note.T, this.notes[i].wait)-Music.tt(this.notes[i-1].note.T, this.notes[i-1].wait));
+				if(i>0){time+=(Music.tt(this.notes[i].note.T, this.notes[i].wait)-Music.tt(this.notes[i-1].note.T, this.notes[i-1].wait));}
+				console.log(i);
 			}
+			var i = this.notes.length-1;
+			time+=Music.tt(this.notes[i].note.T, this.notes[i].note.duration)
 			this.playing = true;
 			var that = this;
 			window.setTimeout(function(){that.playing = false}, time*1000);
+			if(this.looping){
+				this.loop = window.setInterval(function(){if(!that.playing){that.play();}}, Music.tt(that.tempo, 1)*1000);
+			}
+			this.x = 0;
 		},
-		add: function(){
-			var arr = arguments;
-			var interval = 1/4, on = this.notes[this.notes.length-1] != undefined ? (this.notes[this.notes.length-1].wait+this.notes[this.notes.length-1].note.duration)*this.tempo/this.notes[this.notes.length-1].note.T : 0, loudness = this.L, chord = false, f = null;
-			for(var i=0;i<arr.length;i++){
-				var p = arr[i];
-				if(typeof p == 'object'){
-					if(Array.isArray(p)){
-						if(typeof p[1] != 'string'){
-							for(var j=0;j<p.length-1;j+=2){
-								var a0 = p[j], b0 = p[j+1];
-								if(typeof b0 == 'object'){
-									interval = b0.rhythm || interval;
-									loudness = Music.isValidDynamicName(b0.dynamics) ? Music.nameToDynamics(b0.dynamics) : loudness;
-								}else if(typeof b0 == 'number'){
-									interval = b0;
-								}
-								if(Array.isArray(a0)){
-									for(var k=0;k<a0.length;k++){
-										var a1 = a0[k];
-										var n = new Music.Note(this);
-										var _p = a0[k];
-										n.name = _p;
-										n.duration = interval;
-										n.info.loudness = loudness;
-										n.f = f;
-										if(_p[0] == '.'){
-											n._s = this._st;
-										}
-										this.notes.push({wait: on, note: n});
-										f = null;
-									}
-									on+=interval;
-								}else{
-									var n = new Music.Note(this);
-									var _p = a0;
-									n.name = _p;
-									n.duration = interval;
-									n.info.loudness = loudness;
-									n.f = f;
-									if(_p[0] == '.'){
-										n._s = this._st;
-									}
-									this.notes.push({wait: on, note: n});
-									f = null;
-									on+=interval;
-								}
-							}
-							interval = p[1];
-							for(var j=2;j<p.length-1;j+=2){
-								if(typeof p[j] == 'number' && interval>p[j]) interval = p[j];
-								else if(interval>p[j].rhythm) interval = p[j].rhythm;
-							}
-						}else{
-							for(var j=0;j<p.length;j++){
-								var n = new Music.Note(this);
-								var _p = p[j];
-								n.name = _p;
-								n.duration = interval;
-								n.info.loudness = loudness;
-								n.f = f;
-								if(_p[0] == '.'){
-									n._s = this._st;
-								}
-								this.notes.push({wait: on, note: n});
-								f = null;
-							}
-						}
-					}else{
-						p.times = p.times || 1;
-						if('note' in p){
-							for(var k = 0;k<p.times;k++){
-								if('rhythm' in p){
-									if(typeof p.rhythm == 'number') interval = p.rhythm;
-									else interval = p.rhythm[k] != undefined ? p.rhythm[k] : interval;
-								}
-								if('dynamics' in p){
-									if(Array.isArray(p.dynamics)) loudness = Music.isValidDynamicName(p.dynamics[k]) ? Music.nameToDynamics(p.dynamics[k]) : loudness;
-									else if(typeof p.dynamics == 'string' && Music.isValidDynamicName(p.dynamics)) loudness = Music.nameToDynamics(p.dynamics);
-								}
-								if('f' in p){
-									if(Array.isArray(p.f)) f = typeof p.f[k] == 'function' ? p.f[k] : null;
-									else if(typeof p.f == 'function') f = p.f;
-								}
-								chord = 'isChord' in p ? p['isChord'] : false;
-								if(Array.isArray(p['note'])){
-									for(var j=0;j<p['note'].length;j++){
-										if('subDynamics' in p){
-											if(Array.isArray(p.subDynamics)) loudness = Music.isValidDynamicName(p.subDynamics[j]) ? Music.nameToDynamics(p.subDynamics[j]) : loudness;
-											else if(typeof p.subDynamics == 'string' && Music.isValidDynamicName(p.subDynamics)) loudness = Music.nameToDynamics(p.subDynamics);
-										}
-										if('subRhythm' in p){
-											interval = p.subRhythm[j] != undefined ? p.subRhythm[j] : interval;
-										}
-										if('subf' in p){
-											if(Array.isArray(p.f)) f = typeof p.subf[j] == 'function' ? p.subf[j] : null;
-											else if(typeof p.subf == 'function') f = p.subf;
-										}
-										var n = new Music.Note(this);
-										var _p = p['note'][j];
-										n.name = _p;
-										n.duration = interval;
-										n.info.loudness = loudness;
-										n.f = f;
-										if(_p[0] == '.'){
-											n._s = this._st;
-										}
-										this.notes.push({wait: on, note: n});
-										f = null;
-										if(!chord) on+=interval;
-									}
-									for(var j=0;j<p['note'].length;j++){
-										if('subRhythm' in p && interval>p.subRhythm[j]){
-											interval = p.subRhythm[j] != undefined ? p.subRhythm[j] : interval;
-										}
-									}
-								}else{
-									var n = new Music.Note(this);
-									var _p = p['note'];
-									n.name = _p;
-									n.duration = interval;
-									n.info.loudness = loudness;
-									n.f = f;
-									if(_p[0] == '.'){
-										n._s = this._st;
-									}
-									this.notes.push({wait: on, note: n});
-									f = null;
-									if(!chord) on+=interval;
-								}
-								if(chord) on+=interval;
-							}
-							if('rhythm' in p){
-								if(typeof p.rhythm == 'number' && p.rhythm<interval){
-									interval = p.rhythm;
-								}else{
-									for(var k = 0;k<p.times;k++){
-										if(interval>p.rhythm[k]) interval = p.rhythm[k] != undefined ? p.rhythm[k] : interval;
-									}
-								}
-							}
-						}
-					}
-				}else if(typeof p == 'number'){
-					interval = p;
-				}else if(typeof p == 'string'){
-					if(Music.isValidDynamicName(p)){
-						loudness = Music.nameToDynamics(p, this.L);
-					}else if(p == 'chord'){
-						chord = true;
-					}else if(p == '!chord'){
-						chord = false;
-						on+=interval
-					}else if(!isNaN(Number(p))){
-						interval = Number(p);
-					}else if(p.substring(0,4) == 'wait'){
-						if(p.length>4){
-							on+=Number(p.substring(5,p.length));
-						}else on+=interval;
-					}else if(p != ''){
+		stop: function(){
+			for(var i=0;i<this.notes.length;i++){
+				this.note[i].note.stop();
+			}
+			this.playing = false;
+		},
+		add: function(arr){
+			if(!Array.isArray(arr)){console.log('Enter a single array for Music.Score.add');return;}
+			var a = arr;
+			for(var i=0;i<a.length;i++){
+				if(Array.isArray(a[i])){this.add(a[i]);}
+				else{
+					if(typeof a[i] == 'object'){
 						var n = new Music.Note(this);
-						n.name = p;
-						n.duration = interval;
-						n.info.loudness = loudness;
-						n.f = f;
-						if(p[0] == '.'){
-							n._s = this._st;
-						}
-						this.notes.push({wait: on, note: n});
-						f = null;
-						if(!chord) on+=interval;
+						n.name = a[i].name != undefined ? a[i].name : 'A';
+						if(a[i].name[0] == '.'){n._s = this._st;}
+						n.info.loudness = Music.isValidDynamicName(a[i].dynamic) ? Music.nameToDynamics(a[i].dynamic, this.L) : this.L;
+						n.duration = a[i].duration != undefined ? a[i].duration : 1/4;
+						n.oscillator.type = a[i].type != undefined ? a[i].type : 'triangle';
+						var pt = a[i].playTime != undefined ? a[i].playTime : (this.notes.length>0 ? this.notes[this.notes.length-1].wait+this.notes[this.notes.length-1].note.duration : 0);
+						this.notes.push({note: n, wait: pt});
 					}
 				}
 			}
+		},
+		drawdraws: function(lh, sp){
+			for (var op = this.draws.length - 1; op >= 0; op--) {
+				var o = this.draws[op];
+				tool.stroke(0);
+				if(o.note.duration<1/2){tool.fill(0);}
+				else{tool.noFill();}
+				var x = o.x, y = o.y;
+				tool.translate(x+this.x,y);
+				tool.rotate(-0.36);
+				tool.ellipse(0, 0 , sp/2+sp/7, sp/2);
+				tool.pop();
+				var jj = o.j;
+				if(jj<6){
+					for(var i=5;i>=jj;i-=2){
+						tool.line(x-sp+this.x, lh[i], x+sp+this.x, lh[i]);
+					}
+				}else if(jj>16 && jj<19){
+					for(var i=17;i<=jj;i+=2){
+						tool.line(x-sp+this.x, lh[i], x+sp+this.x, lh[i]);
+					}
+				}else if(jj<22 && jj>=19){
+					for(var i=21;i>=jj;i-=2){
+						tool.line(x-sp+this.x, lh[i], x+sp+this.x, lh[i]);
+					}
+				}else if(jj>=33){
+					for(var i=33;i<=jj;i+=2){
+						tool.line(x-sp+this.x, lh[i], x+sp+this.x, lh[i]);
+					}
+				}
+				if(o.note.duration<1){
+					if(jj<=11){
+						if(o.note.name[0] == '.'){
+							tool.fill(0);
+							tool.ellipse(x-this.x, y-sp, 2,2);
+						}
+						tool.line(x-sp/2-sp/7+this.x, y, x-sp/2-sp/7+this.x, y+100+5*(11-jj));
+					}
+					if(jj>11 && jj<=18){
+						if(o.note.name[0] == '.'){
+							tool.fill(0);
+							tool.ellipse(x-this.x, y+sp, 2,2);
+						}
+						tool.line(x+sp/2+sp/7+this.x, y, x+sp/2+sp/7+this.x, y-100-(jj-11)*5);
+					}
+					if(jj>18 && jj<=27){
+						if(o.note.name[0] == '.'){
+							tool.fill(0);
+							tool.ellipse(x-this.x, y-sp, 2,2);
+						}
+						tool.line(x-sp/2-sp/7+this.x, y, x-sp/2-sp/7+this.x, y+100+5*(27-jj));
+					}
+					if(jj>27){
+						if(o.note.name[0] == '.'){
+							tool.fill(0);
+							tool.ellipse(x-this.x, y+sp, 2,2);
+						}
+						tool.line(x+sp/2+sp/7+this.x, y, x+sp/2+sp/7+this.x, y-100-(jj-27)*5);
+					}
+				}
+				
+			}
+		},
+		draw: function(tool, ww, hh){
+			if(tool == undefined || typeof global.Draw == 'undefined'){return;}
+			tool.stroke(0);
+			tool.strokeWeight(1);
+			var lineHeights = [];
+			function dfl(x,y,l,sp,g){
+				for(var i=y;i<y+5*sp;i+=sp){
+					tool.stroke(0);
+					tool.line(x,i,x+l,i);
+				}
+				if(g){
+					for(var i=x;i<x+l;i+=g/2){
+						tool.stroke(0,255,0);
+						tool.line(i+sp/2*12,hh/6,i+sp/2*12,hh/4);
+					}
+				}
+			}
+			const sp = 30, pp = 10;
+			dfl(this.x,hh/pp+hh/4-2.5*sp,ww-this.x, sp, 720);
+			dfl(this.x,hh/pp+hh/4-2.5*sp+8*sp,ww-this.x, sp);
+			for(var i=hh/pp+hh/4-6*sp;i<hh/2+hh/4-hh/pp+6*sp;i+=sp/2){
+				lineHeights.push(i);
+			}
+			tool.stroke(96);
+			if(this.durationMode<1/2){tool.fill(96);}
+			else{tool.noFill();}
+			var y = lineHeights[0], jj = 0;
+			for (var i = lineHeights.length - 1; i >= 0; i--) {
+				if(Math.abs(mouse.y+sp/2-lineHeights[i])<Math.abs(y-lineHeights[i])){
+					y = lineHeights[i];
+					jj = i;
+				}
+			}
+			var spx = 720;
+			var x = mouse.x-this.x;
+
+			x = Math.round(x/spx*this.iner)*spx/this.iner;
+			tool.translate(x+this.x,y);
+			tool.rotate(-0.36);
+			tool.ellipse(0, 0 , sp/2+sp/7, sp/2);
+			tool.pop();
+			if(jj<6){
+				for(var i=5;i>=jj;i-=2){
+					tool.line(x-sp+this.x, lineHeights[i], x+sp+this.x, lineHeights[i]);
+				}
+			}else if(jj>16 && jj<19){
+				for(var i=17;i<=jj;i+=2){
+					tool.line(x-sp+this.x, lineHeights[i], x+sp+this.x, lineHeights[i]);
+				}
+			}else if(jj<22 && jj>=19){
+				for(var i=21;i>=jj;i-=2){
+					tool.line(x-sp+this.x, lineHeights[i], x+sp+this.x, lineHeights[i]);
+				}
+			}else if(jj>=33){
+				for(var i=33;i<=jj;i+=2){
+					tool.line(x-sp+this.x, lineHeights[i], x+sp+this.x, lineHeights[i]);
+				}
+			}
+			if(this.durationMode<1){
+				if(jj<=11){
+					if(this.onst){
+						tool.fill(0);
+						tool.ellipse(x-this.x, y-sp, 2,2);
+					}
+					tool.line(x-sp/2-sp/7+this.x, y, x-sp/2-sp/7+this.x, y+100+5*(11-jj));
+				}
+				if(jj>11 && jj<=18){
+					if(this.onst){
+						tool.fill(0);
+						tool.ellipse(x-this.x, y+sp, 2,2);
+					}
+					tool.line(x+sp/2+sp/7+this.x, y, x+sp/2+sp/7+this.x, y-100-(jj-11)*5);
+				}
+				if(jj>18 && jj<=27){
+					if(this.onst){
+						tool.fill(0);
+						tool.ellipse(x-this.x, y-sp, 2,2);
+					}
+					tool.line(x-sp/2-sp/7+this.x, y, x-sp/2-sp/7+this.x, y+100+5*(27-jj));
+				}
+				if(jj>27){
+					if(this.onst){
+						tool.fill(0);
+						tool.ellipse(x-this.x, y+sp, 2,2);
+					}
+					tool.line(x+sp/2+sp/7+this.x, y, x+sp/2+sp/7+this.x, y-100-(jj-27)*5);
+				}
+			}
+			var me = this;
+			var corr = [
+				'F6', 'E6', 'D6', 'C6', 'B5', 'A5', 'G5', 'F5', 'E5', 'D5', 'C5', 'B', 
+				'A', 'G', 'F', 'E', 'D', 'C', 'B3', 'E', 'D', 'C', 'B3', 'A3', 'G3', 'F3', 
+				'E3', 'D3', 'C3', 'B2', 'A2', 'G2', 'F2', 'E2', 'D2', 'C2', 'B1', 'A1', 'G1', 'F1', 'E1'
+			];
+			space.onmousedown = function(){
+				var name = corr[jj];
+				if(me.onst){name = '.'+name;}
+				var n = new Music.Note(me);
+				n.name = name;
+				if(me.onst){n._s = me._st;}
+				n.duration = me.durationMode;
+				me.draws.push({note: n, x: x, y: y, j: jj});
+				me.notes.push({wait: (x/spx), note: n});
+				beep([{name: name}]);
+			};
+			this.drawdraws(lineHeights, sp);
+			if(this.playing){this.x-=this.tempo/90;}
 		}
 	});
+	Music.Sounds = {
+	};
 	global.Music = Music;
 })(this);

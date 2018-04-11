@@ -18,37 +18,26 @@
 <script src="./libs/Music.js"></script>
 <script type="text/javascript">
 	initSpace();
-	var hit = false;
-	var l = new Geometry.Line2(180,130,640,720);
-	var l2 = new Geometry.Line2(580,160,740,720);
+	var w = new Physics.World2();
+	w.gravity.y = 1/30;
+	var o = new Physics.Obj(Geometry.createLineShape(-300,200,0,-200));
+	o.fixed = true;
+	w.addObj(o);
+	w.cutOffs.down = hh/2;
 	function run(){
-		background(245, 100, 140);
-		hit = l2.in(l);
-		tool.text(hit, 500, 500);
-		timer.update();
-		l.draw(tool);
-		l2.draw(tool);
-		l2.p2 = mouse._clone();
-		tool.fill(0);
-		tool.text(hit, 500,500);
-		if(!score.playing){score.play();}
-		setTimeout(run, 5);
+		background(0);
+		if(w.ps.length<1200){
+			for(var i=0;i<3;i++){
+				var p = new Physics.Particle(randomFloat(-35,35), 0);
+				p.v.y = randomFloat(-1, -10);
+				p.c = Color.random();
+				w.addParticles(p);
+			}
+		}
+		w.update();
+		w.draw(tool);
+		//setTimeout(run, 5);
 	}
-	var score = new Music.Score();
-	score.tempo = 196;
-	// a melodies that I made
-	score.add('mf',['G',1/4],{note: ['G','A','B','G','A','E','G'], subRhythm: [1/8,1/8,1/8,1/8,1/8,1/8,1/4], times: 2}, {note: ['G','A','B'], rhythm: 1/8, times: 2},{note: ['A','B','C5'], rhythm: 1/8, times: 2}, {note: ['E5','C5','A','B','A','E'], rhythm: 1/8}, ['G', 1/4], ['G', {rhythm: 1/4, dynamics: 'ffff'}], 'f', {note: ['G','A','B','F#','G','F#'], rhythm: 1/8}, ['E', 1/4], {note: ['G','A','B','G','A','E','G'], subRhythm: [1/8,1/8,1/8,1/8,1/8,1/8,1/4]}, {note: ['G','A','B','F#','G','F#'], rhythm: 1/8}, ['E', 1/4], {note: ['E','F#','E','G','B','.G','B','E5','F5#','A5','F5#','B5','G5','D5','B','G','F#'], rhythm: 1/8}, ['E', 1/4], 1/8, 'G','A','B','G','A','E',1/4,'G',1/8,'A','B','G','B','C5',1/4,'D5',1/8,{note: '.D5', times: 3}, {note: ['C5','B','C5','D5','.D5','.D5','.D5','C5','B','C5','A','.A','.A','.A','G'], subRhythm: [1/8,1/8,1/8,1/4,1/8,1/8,1/8,1/8,1/8,1/8,1/4,1/8,1/8,1/8]}, {note: ['A','E','G'], times: 3, subRhythm: [1/8,1/8,1/4], subDynamics: ['mf','mf','ffff']}, {note: ['A','E','G','F#','D','G','F#','D'], rhythm: 1/8, subDynamics: ['mf','mf','ffff','mf','mf','ffff','mf']}, ['E', {dynamics: 'm', rhythm: 1/2}]);
-	score.add('mp', {note: ['.G','.B','.G','.C5','.G','.B','.G','.A'], rhythm: 1/8}, {note: ['B','D5'], rhythm: 1/4}, {note: ['.G','.B','.G','.C5','.G','.B','.G','.E'], rhythm: 1/8}, {note: ['A','D5'], rhythm: 1/4}, {note: ['.E','.A','.G','.F#','.E','.G','.D','.E'], rhythm: 1/8}, {note: ['E','B'], rhythm: 1/4}, {note: ['.G','.A','.G','.E','.F#','.G','.F#','.D'], rhythm: 1/8}, {note: ['E','E5'], rhythm: 1/4}, 'mf', {note: ['.E5b','.G5','.E5b','.A5b','.E5b','.G5','.E5b','.F5#'], rhythm: 1/8}, {note: ['G5','B5b'], rhythm: 1/4}, {note: ['.E5b','.G5','.E5b','.A5b','.E5b','.G5','.E5b','.C5'], rhythm: 1/8}, {note: ['F5#','B5b'], rhythm: 1/4}, {note: ['.C5','.F5#','.E5b','.D5','.C5','.E5b','.B4b','.C5'], rhythm: 1/8}, {note: ['C5','G5'], rhythm: 1/4}, {note: ['.E5b','.F5#','.E5b','.C5','.D5','.E5b','.D5','.B4b'], rhythm: 1/8}, {note: ['C5','C6'], rhythm: 1/4}, 'ff', {note: ['.G5','.B5','.G5','.C6','.G5','.B5','.G5','.A5'], rhythm: 1/8}, {note: ['B5','D6'], rhythm: 1/4}, {note: ['.G5','.B5','.G5','.C6','.G5','.B5','.G5','.E5'], rhythm: 1/8}, {note: ['A5','D6'], rhythm: 1/4}, {note: ['.E5','.A5','.G5','.F#5','.E5','.G5','.D5','.E5'], rhythm: 1/8}, {note: ['E5','B5'], rhythm: 1/4}, {note: ['.G5','.A5','.G5','.E5','.F#5','.G5','.F#5','.D5'], rhythm: 1/8}, {note: ['E5','E6'], rhythm: 1/4});
-	score._s = 0.65;
-	score.add('mf', {note: ['C5','C5','B','G','A','A','A'], subRhythm: [1/4,1/4,1/4,1/4,1/4+1/8,1/8,1/4]},{times: 2, note: ['G','.F#','E','.E','.E'], subRhythm: [1/8,1/8,1/4+1/8,1/8,1/4], subDynamics: ['mf','mf','ff','m','mf']},{note: ['A','.G','F#','.F#','.F#'], subRhythm: [1/8,1/8,1/4+1/8,1/8,1/4], subDynamics: ['mf','mf','ff','m','mf']},{note: ['B','.A','G','.G','G'], subRhythm: [1/8,1/8,1/4+1/8,1/8,1/4], subDynamics: ['mf','mf','ff','m','mf']}, {note: ['B','C5','D5','B','C5','D5','C5','B','A','G','F#','G','A','G'], subRhythm: [1/8,1/8,1/8,1/8,1/8,1/8,1/4,1/8,1/8,1/8,1/8,1/8,1/8,1/4], subDynamics: ['mf','mf','mf','mf','mf','mf','ff','mf','mf','mf','mf','mf','mf','ff']}, {note: ['A','G','F#','.F#','F#'], subRhythm: [1/8,1/8,1/4+1/8,1/8,1/4], subDynamics: ['mf','mf','ff','m','mf'], times: 2}, {note: ['B','A','G','.G','G'], subRhythm: [1/8,1/8,1/4+1/8,1/8,1/4], subDynamics: ['mf','mf','ff','m','mf'], times: 2}, {note: ['B','A','A','B','A','G'], rhythm: 1/8}, ['F#', 1/4+1/8], ['F#', 1/8], ['F#', 1/4], {note: ['D','.C','B3','.B3','.B3'], subRhythm: [1/8,1/8,1/4+1/8,1/8,1/4], subDynamics: ['mf','mf','ff','m','mf'], times: 3}, 'm',{note: ['B3','C','B3','C','E','G','B','D5','G5','B5','D5','B','G','E','A','G','D'], rhythm: 1/8}, ['E', 1/4],'mf','wait 0.125',['E',1/8],'wait 0.125',{note: ['.E','.E','.E#'], rhythm: 1/8}, 'wait 0.125', {note: ['.E','.E','.Eb'], rhythm: 1/8}, 'wait 0.125', {note: ['.E','E','D#','E','D','C','E','G','.B','B','G','B','C5','B','C5'], rhythm: 0.125}, ['A',1/4],'wait 0.125',['A',1/8],'wait 0.125',{note: ['.A','.A','.B'], rhythm: 1/8}, 'wait 0.125', {note: ['.A','.A','.Ab'], rhythm: 1/8}, 'wait 0.125',{note: ['.A','A','B','A','F#','B3'], rhythm: 1/8}, ['.C4', {dynamics: 'm', rhythm: 1/4}],'f',['.C4', 1/4],{note: ['C','E','C','E','C','F#','C5','E5','C5','E5','C5','F5#'], subRhythm: [1/4,1/4,1/8,1/8,1/8,1/4,1/4,1/4,1/8,1/8,1/8,1/4]}, 'wait 1.5', 'mf', 'wait 0.125',['E',1/8],'wait 0.125',{note: ['.E','.E','.E#'], rhythm: 1/8}, 'wait 0.125', {note: ['.E','.E','.Eb'], rhythm: 1/8}, 'wait 0.125', {note: ['.E','E','D#','E','D','C','E','G','.B','B','G','B','C5','B','C5'], rhythm: 0.125}, ['A',1/4],'wait 0.125',['A',1/8],'wait 0.125',{note: ['.A','.A','.B'], rhythm: 1/8}, 'wait 0.125', {note: ['.A','.A','.Ab'], rhythm: 1/8}, 'wait 0.125', {rhythm: 1/8, note: ['A','B','C5','B','A','F#','G','D','E']});
-	// fools garden lemon tree
-	score.tempo = 158;
-	score._s = 0.77;
-	score.add('f', {note: ['.B','.B','.B','E5','E5','E5','.A','.A','D5'], subRhythm: [1/8,1/8,1/4+1/8,1/4,1/8,1/8,1/4,1/8,1/8+1/8]}, 'wait 0.25', {times: 6, note: '.B', rhythm: 1/8}, {note: ['A','G','.G','A','.A','B','.B'], subRhythm: [1/8,1/8,1/8,1/4,1/8,1/4+1/8,1/4]}, {note: ['B','.B','.B','E5','.E5','.E5','A','A','A','D5'], subRhythm: [1/8,1/8,1/8,1/4,1/4,1/8,1/8,1/8,1/8,1/4]}, 'wait 0.25', {note: ['A','.A','.A','G','A','.A','.A','.A','A','B','D5','A','.A','.A','G','A','B'], subRhythm: [1/8,1/8,1/8,1/8,1/4+1/8,1/4,1/8,1/8,1/8,1/4+1/8,1/4,1/8,1/8,1/8,1/8,1/8,1/4+1/8]}, 'wait 0.25', {note: ['A','B','.A','G','E'], subRhythm: [1/8, 1/4, 1/4, 1/8, 1/4+1/8]}, 'wait 1', {note: ['.B','.B','.B','E5','E5','E5','.A','.A','D5'], subRhythm: [1/8,1/8,1/4+1/8,1/4,1/8,1/8,1/4,1/8,1/8+1/8]}, 'wait 0.25', {times: 6, note: '.B', rhythm: 1/8}, {note: ['A','G','.G','A','.A','B','.B'], subRhythm: [1/8,1/8,1/8,1/4,1/8,1/4+1/8,1/4]}, {note: ['B','.B','.B','E5','.E5','.E5','A','A','A','D5'], subRhythm: [1/8,1/8,1/8,1/4,1/4,1/8,1/8,1/8,1/8,1/4]}, 'wait 0.25', {note: ['A','.A','.A','G','A','.A','.A','.A','A','B','D5','A','.A','.A','G','A','B'], subRhythm: [1/8,1/8,1/8,1/8,1/4+1/8,1/4,1/8,1/8,1/8,1/4+1/8,1/4,1/8,1/8,1/8,1/8,1/8,1/4+1/8]}, 'wait 0.125', {note: ['A','B','.A','G','E'], subRhythm: [1/8, 1/4, 1/4, 1/8, 1/4+1/8]});
-	window.addEventListener('touchstart', function(){if(!score.playing) score.play();}, false);
-	window.addEventListener('mousedown', function(){if(!score.playing) score.play();}, false);
-	//run();
-	//hit = l2.in(l);
 	run();
 </script>
 </html>

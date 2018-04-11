@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>
+		Music
+	</title>
+</head>
+<style>
+	body{
+		text-align: center;
+	}
+</style>
+<body>
+</body>
+<script src="./libs/Draw.js"></script>
+<script src="./libs/Music.js"></script>
+Interval: <input type="number" name="interval" onchange="cd2(this.value)">
+Duration: <input type="number" name="duration" onchange="cd(this.value)">
+Print: <button onclick="pp()">Print</button>
+<script type="text/javascript">
+	initSpace();
+	key();
+	var score = new Music.Score();
+	window.addEventListener('keydown', function(e){
+		if(e.key == 'p' && score.playing == false){
+			score.play();
+		}
+		if(e.key == 'd'){
+			score.onst = !score.onst;
+		}
+	}, false);
+	function cd(d){
+		score.durationMode = d/4;
+		cd2(d/4);
+	}
+	function cd2(d){
+		score.iner = 1/d;
+	}
+	function pp(){
+		console.log(score.print());
+	}
+	function run(){
+		background(255);
+		tool.fill(0);
+		tool.textSize(ww/20);
+		tool.text('MUSIC',ww/2,hh/10)
+		score.draw(tool, ww, hh);
+		if(keys.q){score.x+=3;}
+		if(keys.e){score.x-=3;}
+		setTimeout(run, 5);
+	}
+	run();
+</script>
+</html>

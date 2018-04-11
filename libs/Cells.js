@@ -51,7 +51,7 @@
 		this.initR = this.r;
 		if(_DNA) this.DNA = _DNA._clone();
 		else this.DNA = new DNA();
-		this.c = {r: 220, g: 180, b: 0, a: 255};
+		this.c = new Color({r: 220, g: 180, b: 0, a: 255});
 		this.clock = new Clock();
 		this.timer = new Timer('d',1100);
 		this.isDead = false;
@@ -331,8 +331,6 @@
 				if(keys.ArrowDown) this.m.y-=2.2;
 				if(keys.ArrowLeft) this.m.x+=2.2;
 				if(keys.ArrowRight) this.m.x-=2.2;
-			}else{
-				console.log('Hello');
 			}
 		}
 	});
