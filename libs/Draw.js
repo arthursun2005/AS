@@ -27,10 +27,25 @@ function constrain(value, min, max){
 	if(value>=max){return max;}
 	else{return value;}
 }
+Array.prototype._clone = function(){
+	var arr = [];
+	for(var i=0;i<this.length;i++){var o = this[i]; if(typeof o == 'object'){if(Array.isArray(o)){arr[i] = o._clone(); }else{arr[i] = o.clone(); } }else{arr[i] = this[i]; } } return arr; 
+};
+Object.prototype.clone = function(){
+	var obj = {}, me = this;
+	for(var key in me){
+		var o = me[key];
+		if(typeof o == 'object'){
+			if(Array.isArray(o)){obj[key] = o._clone(); }
+			else{obj[key] = o.clone(); } 
+		}else{obj[key] = this[key]; } 
+	} 
+	return obj;
+};
 function Color(a,b,c,d){return this.set(a,b,c,d);}
 Object.assign(Color.prototype, {
 	get: function(a){
-		return this._set(a.r, a.b, a.g, a.a);
+		return this._set(a.r, a.g, a.b, a.a);
 	},
 	set: function(a,b,c,d){
 		if(a == undefined){
@@ -157,6 +172,7 @@ function randomFloat(a, b){
 	return a+Math.random()*(b-a);
 }
 function Point(x,y){
+	this.data = {};
 	return this.set(x,y);
 }
 Object.assign(Point.prototype, {
@@ -171,7 +187,10 @@ Object.assign(Point.prototype, {
 		return this;
 	},
 	_clone: function(){
-		return new this.constructor(this.x,this.y);
+		var p = new Point();
+		p.x = this.x, p.y = this.y;
+		p.data = this.data;
+		return p;
 	},
 	scale: function(s){
 		this.x*=s;
@@ -242,8 +261,9 @@ Object.assign(Point.prototype, {
 		return this;
 	},
 	normalize: function(){
-		this.x/=this.mag();
-		this.y/=this.mag();
+		var m = this.mag();
+		this.x/=m;
+		this.y/=m;
 		return this;
 	},
 	normalized: function(){
@@ -258,8 +278,8 @@ Object.assign(Point.prototype, {
 		return a;
 	},
 	lerp: function(v,a){
-		this.x = (v.x-this.x)*a;
-		this.y = (v.y-this.y)*a;
+		this.x+=(v.x-this.x)*a;
+		this.y+=(v.y-this.y)*a;
 		return this;
 	},
 	equals: function(v){
@@ -352,9 +372,9 @@ Object.assign(Point, {
 		return new Point(a.x-b.x,a.y-b.y);
 	},
 	scale: function(a,s){
-		var a = a._clone();
-		a.scale(s);
-		return a;
+		var _a = a._clone();
+		_a.scale(s);
+		return _a;
 	},
 	mult: function(a,b){
 		var a = a._clone();

@@ -19,24 +19,41 @@
 <script type="text/javascript">
 	initSpace();
 	var w = new Physics.World2();
-	w.gravity.y = 1/30;
-	var o = new Physics.Obj(Geometry.createLineShape(-300,200,0,-200));
+	w.gravity.y = 1/10;
+	var o = new Physics.Obj(Geometry.createRectShape(0,0,800,800));
 	o.fixed = true;
 	w.addObj(o);
-	w.cutOffs.down = hh/2;
+	w.cutOffs.down = hh;
+	w.cutOffs.left = -ww;
+	w.cutOffs.right = ww;
+	window.addEventListener('mousedown', function(event){
+		if(Math.random()>0){
+			var size = 9, sp = 11.2;
+			for(var x=-size;x<=size;x++){
+				for(var y=-size;y<=size;y++){
+					var p = new Physics.Particle(mouse.x-w.c.x+x*sp,mouse.y-w.c.y+y*sp);
+					w.addParticles(p);
+				}
+			}
+		}else{
+			var o = new Physics.Obj(Geometry.createRectShape(mouse.x-w.c.x,mouse.y-w.c.y,200,60));
+			w.addObj(o);
+		}
+	});
+	var p1, p2;
 	function run(){
 		background(0);
-		if(w.ps.length<1200){
-			for(var i=0;i<3;i++){
-				var p = new Physics.Particle(randomFloat(-35,35), 0);
-				p.v.y = randomFloat(-1, -10);
-				p.c = Color.random();
-				w.addParticles(p);
-			}
+		if(w.ps.length<2000 && 0){
+			//for(var i=0;i<3;i++){
+				p1 = new Physics.Particle(-15,100);
+				p2 = new Physics.Particle(15,100);
+				p1.v.y = -10; p2.v.y = -10;
+				w.addParticles(p1, p2);
+			//}
 		}
 		w.update();
 		w.draw(tool);
-		//setTimeout(run, 5);
+		window.setTimeout(run, 5);
 	}
 	run();
 </script>

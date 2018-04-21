@@ -3,9 +3,7 @@
 using namespace std;
 int isPrime(double n){
 	for(double i=2;i<=sqrt(n);++i){
-		if(round(n/i) == n/i){
-			return false;
-		}
+		if(round(n/i) == n/i){return false;}
 	}
 	return true;
 }

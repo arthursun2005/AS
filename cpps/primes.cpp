@@ -1,15 +1,7 @@
 #include <iostream>
 #include <cmath>
+#include "Primes.h"
 using namespace std;
-int isPrime(long long n){
-	double t = n;
-	for(double i=2;i<=sqrt(t);++i){
-		if(round(t/i) == t/i){
-			return false;
-		}
-	}
-	return true;
-}
 int main(int argc, char const *argv[])
 {
 	cout << "Ready" << endl;

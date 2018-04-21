@@ -4,21 +4,6 @@
 	//			SETUP			//
 	//							//
 	//	**********************	//
-	global.Array.prototype._clone = function(){
-		var arr = [];
-		for(var i=0;i<this.length;i++){var o = this[i]; if(typeof o == 'object'){if(Array.isArray(o)){arr[i] = o._clone(); }else{arr[i] = o.clone(); } }else{arr[i] = this[i]; } } return arr; 
-	};
-	global.Object.prototype.clone = function(){
-		var obj = {}, me = this;
-		for(var key in me){
-			var o = me[key];
-			if(typeof o == 'object'){
-				if(Array.isArray(o)){obj[key] = o._clone(); }
-				else{obj[key] = o.clone(); } 
-			}else{obj[key] = this[key]; } 
-		} 
-		return obj;
-	};
 	global.Array.prototype._sort = function(changeObj){
 		var arr = this;
 		if(arr.length<1) return null;
@@ -50,8 +35,9 @@
 		}
 		return {all: all, minP: minP, maxD: maxD, arr: arr, p: p};
 	};
-	global.Array._sortLoop = function(f, obj, times = 3){
-		if(!obj) return false;
+	global.Array._sortLoop = function(f, obj, times){
+		if(!obj) {return false;}
+		if(times == undefined){times = 3;}
 		var all = obj.all, minP = obj.minP, maxD = obj.maxD, arr = obj.arr, p = obj.p;
 		times = Math.round(times);
 		if(times%2 == 0){
@@ -191,7 +177,16 @@
 	//											//
 	/********************************************/
 	var Point = global.Point;
-	global.Clock = function(){this.time = 0; this.running = true; this.start = Date.now(); this.lastRecordTime = this.start; }; Object.assign(global.Clock.prototype, {set: function(start){this.time+=(this.time-start); this.start = start; }, update: function(){if(this.running) this.time+=Date.now()-this.lastRecordTime; this.lastRecordTime = Date.now(); }, reset: function(){this.set(Date.now()); }, _clone: function(){var clock = new Clock(); clock.time = this.time, clock.lastRecordTime = this.lastRecordTime, clock.start = this.start, clock.running = this.running; return clock; } });
+	global.Clock = function(){
+		this.time = 0; this.running = true; this.start = Date.now(); this.lastRecordTime = this.start; 
+	}; 
+	Object.assign(global.Clock.prototype, {
+		set: function(start){this.time+=(this.time-start); this.start = start; }, 
+		update: function(){if(this.running){this.time+=Date.now()-this.lastRecordTime;}this.lastRecordTime = Date.now(); }, 
+		getDelta: function(){var dt = Date.now()-this.lastRecordTime;this.update();return dt;},
+		reset: function(){this.set(Date.now()); }, 
+		_clone: function(){var clock = new Clock(); clock.time = this.time, clock.lastRecordTime = this.lastRecordTime, clock.start = this.start, clock.running = this.running; return clock; } 
+	});
 	Point.prototype.in = function(obj){
 		if(obj instanceof Geometry.Shape2){
 			if(obj.ps.length<1){return false;}
@@ -342,7 +337,8 @@
 		}
 	});
 	Geometry.Line2 = function(a,b,c,d){
-		this.c = '#ffee00';
+		this.c = new Color('#ffee00');
+		this.data = {};
 		this.set(a,b,c,d);
 	};
 	Object.assign(Geometry.Line2.prototype, {
@@ -392,7 +388,11 @@
 			tool.pop();
 		},
 		_clone: function(){
-			return new this.constructor(this);
+			var l = new this.constructor();
+			l.p1 = this.p1._clone();
+			l.p2 = this.p2._clone();
+			l.data = this.data;
+			return l;
 		},
 		in: function(obj, _in_){
 			if(obj instanceof Geometry.Line2){
@@ -465,6 +465,7 @@
 		}
 	});
 	Geometry.Line3 = function(a,b,c,d,e,f){
+		this.data = {};
 		this.set(a,b,c,d,e,f);
 	};
 	Object.assign(Geometry.Line3.prototype, {
@@ -484,7 +485,9 @@
 			this.p2 = line3.p2._clone();
 		},
 		_clone: function(){
-			return new this.constructor(this);
+			var l = new this.constructor(this);
+			l.data = this.data;
+			return l;
 		},
 		rotate: function(angle, axis){
 			this.p1.rotate(angle, axis);
@@ -515,7 +518,7 @@
 		}
 	};
 	Geometry.createLineShape = function(a,b,c,d,e){
-		var t = 5;
+		var t = 7;
 		if(a instanceof Geometry.Line2){
 			var p1 = a.p1._clone(), p2 = a.p2._clone();
 			if(b == undefined){var r = t;}
@@ -547,12 +550,19 @@
 	Geometry.Shape2 = function(){
 		var args = arguments;
 		this.ps = [];
+		this.data = {};
 		this._set(args);
 		this.c = new Color('#dd88ff');
+		this.coreectIn2d = true;
 	};
 	Object.assign(Geometry.Shape2.prototype, {
+		closed: function(){
+			return this.ps[this.ps.length-1].equals(this.ps[0]);
+		},
 		_clone: function(){
-			return new this.constructor(this);
+			var s = new this.constructor(this);
+			s.data = this.data;
+			return s;
 		},
 		set: function(){
 			var a = arguments;
@@ -738,14 +748,34 @@
 		},
 		area: function(){
 			/* Gauss's area formula */
-			var a = 0;
-			for(var i=0;i<this.ps.length;i++){
-				var j = (i+1)%this.ps.length;
-				a+=this.ps[i].x*this.ps[j].y-this.ps[i].y*this.ps[j].x;
+			if(this.coreectIn2d && this.closed()){
+				var a = 0;
+				for(var i=0;i<this.ps.length;i++){
+					var j = (i+1)%this.ps.length;
+					a+=this.ps[i].x*this.ps[j].y-this.ps[i].y*this.ps[j].x;
+				}
+				return a/2;
+			}else{
+				var a = 0;
+				for(var i=0;i<this.ps.length;i++){
+					var j = (i+1)%this.ps.length;
+					var l = new Geometry.Line2(this.ps[i], this.ps[j]);
+					a+=l.mag();
+				}
+				return a;
 			}
-			return a/2;
 		},
 		center: function(){
+			if(!this.coreectIn2d || !this.closed()){
+				var d = new Point();
+				for(var i=0;i<this.ps.length;i++){
+					var j = (i+1)%this.ps.length;
+					var l = new Geometry.Line2(this.ps[i], this.ps[j]);
+					var c = l.center();
+					d.add(c.scale(l.mag()));
+				}
+				return d.scale(1/this.area());
+			}
 			var c = new Point(), area = this.area();
 			for(var i=0;i<this.ps.length;i++){
 				var j = (i+1)%this.ps.length;
@@ -776,34 +806,41 @@
 			elestic: 0,
 			tensileA: 0,
 			tensileB: 0,
-			repulsion: 1,
-			w0: -0.8, 
-			w1: 0.2,
-			u: 0.05,
-			powder: 0,
-			mixColors: true,
-			pressure: 0.1
+			repulsion: 1.5,
+			w0: -128, 
+			w1: 2.3, 
+			u: 0.6, 
+			powder: 0, 
+			mixColors: false, 
+			pressure: 0.15
 		};
 		for(var k in d){if(k in o){o[k] = d[k];}}
 		return o;
 	}
 	Physics.ParticleGroup = function(){
 		this.cc = cc();
-		this.init = [];
+		this.data = {};
 	};
 	Object.assign(Physics.ParticleGroup, {
 	});
 	Physics.Particle = function(x,y,g){
 		this.p = new Point(x,y);
 		this.v = new Point();
-		this.c = new Color(120,120,180,180);
-		this.r = 3;
+		this.c = new Color(120,120,250,255);
+		this.r = 5.6;
 		this.w = 0;
+		this.density = 1;
+		this.data = {};
+		this.fixed = false;
 		this.s = new Point();
-		if(g == undefined){g = null;}
 		this.group = g;
 	};
 	Object.assign(Physics.Particle.prototype, {
+		constrainVel: function(max){
+			if(this.v.mag()>max){
+				this.v.set(Point.scale(this.v.normalized(), max));
+			}
+		},
 		mixColors: function(b, dt){
 			if(dt == undefined){dt = 1;}
 			var d = Point.sub(b.p, this.p);
@@ -811,39 +848,94 @@
 			var a2 = this.v.angle();
 			var a3 = b.v.angle();
 			var u = Math.abs(this.v.mag()*Math.cos(a1-a2))+Math.abs(b.v.mag()*Math.cos(a1-a3));
-			this.c.mix(b.c, dt*u/(u+1e3));
+			this.c.mix(b.c, dt*u/(u+1.5e3));
 		},
-		fiil: function(a,b,c,d){
+		fill: function(a,b,c,d){
 			this.c.set(a,b,c,d);
+		},
+		getArea: function(){
+			return Math.PI*this.r*this.r;
+		},
+		getMass: function(){
+			return this.density*this.getArea();
+		},
+		setMass: function(mass){
+			this.density = mass/this.getArea();
+		},
+		applyForce: function(f, scl){
+			if(this.fixed){return;}
+			if(scl == undefined){scl = 1;}
+			var m = this.getMass();
+			this.v.add(Point.scale(f, scl/m));
 		},
 		_clone: function(){
 			var p = new Physics.Particle();
-			p.p = this._p._clone();
+			p.r = this.r;
+			p.w = this.w;
+			p.data = this.data;
+			p.fixed = this.fixed;
+			p.group = this.group;
+			p.density = this.density;
+			p.c = this.c._clone();
+			p.s = this.s._clone();
+			p.p = this.p._clone();
+			p.v = this.v._clone();
 			return p;
 		},
 		update: function(dt){
 			if(dt == undefined){dt = 1;}
+			if(this.fixed){this.v.set(0,0);}
 			this.p.add(Point.scale(this.v, dt));
 		},
 		draw: function(tool){
 			if(tool == undefined){console.warn('No tool passed on');return;}
-			tool.noStroke();
-			tool.fill(this.c);
-			tool.ellipse(this.p.x,this.p.y,this.r,this.r);
+			if(this.r<4){
+				this.c.a = 144;
+				tool.noStroke();
+				tool.fill(this.c);
+				tool.ellipse(this.p.x,this.p.y,this.r,this.r);
+			}else{
+				this.c.a = 255;
+				tool.noFill();
+				tool.stroke(this.c);
+				var p1 = Point.polar(this.r, 0, this.p);
+				var p2 = Point.polar(this.r, Math.PI*2/3, this.p);
+				var p3 = Point.polar(this.r,  Math.PI*4/3, this.p);
+				tool.triangle(p1.x,p1.y,p2.x,p2.y,p3.x,p3.y);
+			}
 		}
 	});
 	Physics.Obj = function(shape){
+		this.data = {};
 		this.shape = (shape instanceof Geometry.Shape2) ? shape._clone() : new Geometry.Shape2(arguments);
 		this.attachments = [];
 		this.v = new Geometry.Point2();
 		this.av = 0;
 		this.fixed = false;
 		this.fillin = false;
+		this.density = 1;
 	};
 	Object.assign(Physics.Obj.prototype, {
+		constrainVel: function(max){
+			if(this.v.mag()>max){
+				this.v.set(Point.scale(this.v.normalized(), max));
+			}
+		},
+		center: function(){
+			return this.shape.center();
+		},
+		getArea: function(){
+			return this.shape.area();
+		},
+		getMass: function(){
+			return this.getArea()*this.density;
+		},
+		setMass: function(mass){
+			this.density = mass/this.getArea();
+		},
 		update: function(dt){
 			if(dt == undefined){dt = 1;}
-			if(this.fixed){return;}
+			if(this.fixed){this.v.set(0,0);}
 			this.shape.add(Point.scale(this.v, dt));
 			this.shape.rotateAround(this.av*dt);
 		},
@@ -851,7 +943,9 @@
 			this.shape.draw(tool, this.fillin);
 		},
 		_clone: function(){
-			return new this.constructor(this);
+			var o = new this.constructor(this);
+			o.data = this.data;
+			return o;
 		},
 		rotateAround: function(a, p){
 			this.shape.rotateAround(a, p);
@@ -859,7 +953,23 @@
 		rotate: function(a){
 			this.shape.rotate(a);
 		},
-		applyForce: function(f, p){
+		getVelAt: function(p){
+			var d = Point.sub(this.shape.center(), p);
+			var m = d.mag();
+			return [this.v._clone(), (Point.polar(m*this.av, d.angle()+Math.PI/2))];
+		},
+		applyForce: function(f, p, scl){
+			if(this.fixed){return;}
+			if(scl == undefined){scl = 1;}
+			var _f = f._clone(), c = this.center();
+			_f.scale(scl);
+			var d = Point.sub(p, c), a = d.angle();
+			var n = d.normalized();
+			_f.changeAxis(a);
+			var m1 = _f.x, m2 = _f.y;
+			var mass = this.getMass();
+			this.v.add(Point.scale(n, m1/mass));
+			this.av+=-m2/mass/180;
 		}
 	});
 	Object.assign(Physics.Obj, {
@@ -867,12 +977,14 @@
 		}
 	});
 	Physics.World2 = function(){
+		this.data = {};
 		this.ps = [];
 		this.os = [];
 		this.fr = 0;
 		this.dt = 1;
 		this.scl = 1;
 		this.cc = cc();
+		this.pfr = 0.997;
 		this.gravity = new Geometry.Point2();
 		this.m = new Geometry.Point2();
 		if(global.center != undefined){this.c = global.center._clone();}
@@ -880,9 +992,22 @@
 		this.cutOffs = {};
 	};
 	Object.assign(Physics.World2.prototype, {
+		_ps: function(){
+			var ps = [];
+			for (var i = this.ps.length - 1; i >= 0; i--) {
+				ps[i] = this.ps[i]._clone();
+			}
+			return ps;
+		},
+		getPs: function(ps){
+			for (var i = ps.length - 1; i >= 0; i--) {
+				this.ps[i] = ps[i]._clone();
+			}
+		},
 		update: function(){
 			this.solve();
 			for (var i = this.ps.length - 1; i >= 0; i--) {
+				if(this.pfr){this.ps[i].v.scale(this.pfr);}
 				this.ps[i].v.add(Point.scale(this.gravity, this.dt));
 				this.ps[i].update(this.dt);
 				this.ps[i].w = 0;
@@ -892,7 +1017,6 @@
 				this.os[i].v.add(Point.scale(this.gravity, this.dt));
 				this.os[i].update(this.dt);
 			}
-
 		},
 		draw: function(tool){
 			if(tool == undefined){console.log('No tool');return;}
@@ -902,16 +1026,16 @@
 			for (var i = this.ps.length - 1; i >= 0; i--) {
 				for(var k in this.cutOffs){
 					if(k == 'down'){
-						if(this.ps[i].p.y-this.ps[i].r>this.cutOffs[k]){this.ps.splice(i,1);continue;}
+						if(this.ps[i].p.y-this.ps[i].r>this.cutOffs[k]){this.ps.splice(i,1);break;}
 					}else if(k == 'up'){
-						if(this.ps[i].p.y+this.ps[i].r<this.cutOffs[k]){this.ps.splice(i,1);continue;}
+						if(this.ps[i].p.y+this.ps[i].r<this.cutOffs[k]){this.ps.splice(i,1);break;}
 					}else if(k == 'left'){
-						if(this.ps[i].p.x+this.ps[i].r<this.cutOffs[k]){this.ps.splice(i,1);continue;}
+						if(this.ps[i].p.x+this.ps[i].r<this.cutOffs[k]){this.ps.splice(i,1);break;}
 					}else if(k == 'right'){
-						if(this.ps[i].p.y-this.ps[i].r>this.cutOffs[k]){this.ps.splice(i,1);continue;}
+						if(this.ps[i].p.y-this.ps[i].r>this.cutOffs[k]){this.ps.splice(i,1);break;}
 					}
 				}
-				this.ps[i].draw(tool);
+				if(this.ps[i]){this.ps[i].draw(tool);}
 			}
 			for (var i = this.os.length - 1; i >= 0; i--) {
 				this.os[i].draw(tool);
@@ -919,8 +1043,8 @@
 			tool.pop();
 		},
 		addParticles: function(){
-			for (var i = arguments.length - 1; i >= 0; i--) {
-				this.ps.push(arguments[i]);
+			for (var i = 0; i < arguments.length; i++) {
+				this.ps.push(arguments[i]._clone());
 			}
 		},
 		addGroup: function(g){
@@ -929,12 +1053,12 @@
 			this.os.push(obj);
 		},
 		solve: function(){
-			var sp = this.ps._sort();
-			var pAll = sp.all;
+			if(this.ps.length<1 && this.os.length < 1){return;}
+			var ps = this._ps();
+			var sp = ps._sort();
 			var me = this;
 			function _fp1(data){
-				var dp = Point.sub(data.obj2.p, data.obj1.p);
-				var dv = Point.sub(data.obj2.v, data.obj1.v);
+				var dp = Point.sub(me.ps[data.id2].p, me.ps[data.id1].p);
 				var n = dp.normalized();
 				var m = dp.mag(), D = data.obj1.r+data.obj2.r;
 				if(m<D){
@@ -946,11 +1070,10 @@
 					data.obj2.s.sub(Point.scale(n, v));
 				}
 			}
-			Array._sortLoop(_fp1, sp);
 			function _fp2(data){
 				// https://docs.google.com/presentation/d/1fEAb4-lSyqxlVGNPog3G1LZ7UgtvxfRAwR0dwd19G4g/edit#slide=id.g343a5269c_00
-				var dp = Point.sub(data.obj2.p, data.obj1.p);
-				var dv = Point.sub(data.obj2.v, data.obj1.v);
+				var dp = Point.sub(me.ps[data.id2].p, me.ps[data.id1].p);
+				var dv = Point.sub(me.ps[data.id2].v, me.ps[data.id1].v);
 				var n = dp.normalized();
 				var m = dp.mag(), D = data.obj1.r+data.obj2.r;
 				if(m<D){
@@ -971,38 +1094,146 @@
 						var h2 = Math.max(0, (data.obj2.w-w0)*pressure);
 						var tf = (h1+h2)*repulsion*w*me.dt;
 					}
-					data.obj1.v.sub(Point.scale(n, tf));
-					data.obj2.v.add(Point.scale(n, tf));
+					data.obj1.applyForce(n, -tf);
+					data.obj2.applyForce(n, tf);
 					var vf = u*me.dt;
-					data.obj1.v.add(Point.scale(dv, vf));
-					data.obj2.v.sub(Point.scale(dv, vf));
+					data.obj1.applyForce(dv, vf)
+					data.obj2.applyForce(dv, -vf)
 					if(mixColors){data.obj1.mixColors(data.obj2, me.dt);}
 					var ta = sg == true ? gg.cc.tensileA : me.cc.tensileA;
 					var tb = sg == true ? gg.cc.tensileB : me.cc.tensileB;
 					var A = ta * (data.obj2.w+data.obj1.w - 2*w0);
 					var B = tb * (Point.sub(data.obj2.s, data.obj1.s).dot(n));
 					var tvf = -me.dt*(A+B);
-					data.obj1.v.sub(Point.scale(n, tvf));
-					data.obj2.v.add(Point.scale(n, tvf));
+					data.obj1.applyForce(n, -tvf)
+					data.obj2.applyForce(n, tvf)
 				}
 			}
+			Array._sortLoop(_fp1, sp);
 			Array._sortLoop(_fp2, sp);
-			if(this.os.length < 1){return;} // :)  >_
+			if(this.os.length < 1){this.getPs(ps);return;}
 			// disintegrate
 			var lines = [];
 			for (var i = this.os.length - 1; i >= 0; i--) {
 				for (var j =  0; j < this.os[i].shape.ps.length - 1; j++) {
 					var l = new Geometry.Line2(this.os[i].shape.ps[j], this.os[i].shape.ps[j+1]);
 					l.p = l.center(), l.r = l.mag()/2, l.obj = this.os[i];
+					l.p1.obj = l, l.p2.obj = l;
 					lines.push(l);
 				}
 			}
+			if(this.ps.length>0){
+				for (var i = lines.length - 1; i >= 0; i--) {
+					var l = lines[i], maxD = sp.maxD, all = sp.all, minP = sp.minP;
+					var times = Math.ceil(l.r/maxD)*2, p = 'p';
+					if(times%2 == 0){
+						// is even
+						var a = times/2-1;
+						var b = times/2;
+					}else{
+						// is odd
+						var a = Math.floor(times/2);
+						var b = a;
+					}
+					if(times%2 == 0){
+						var y = Math.floor((l[p].y-minP.y-maxD/2)/maxD);
+						var x = Math.floor((l[p].x-minP.x-maxD/2)/maxD);
+					}else{
+						var y = Math.floor((l[p].y-minP.y)/maxD);
+						var x = Math.floor((l[p].x-minP.x)/maxD);
+					}
+					for(var py=y-a;py<=y+b;py++){
+						if(!all[py]) continue;
+						for(var px=x-a;px<=x+b;px++){
+							if(!all[py][px]) continue;
+							for (var j = all[py][px].length - 1; j >= 0; j--) {
+								var j0 = all[py][px][j];
+								var p2 = j0.obj;
+								var _p2 = me.ps[j0.id];
+								var _p = _p2.p;
+								var data = l.getDataOnPoint(_p);
+								var vm = (_p2.v.mag());
+								if(data.dist>p2.r+vm) continue;
+								var vv = l.obj.getVelAt(_p);
+								var vd = Point.sub(vv[0], _p2.v);
+								var d = Point.sub(data.p, _p);
+								var n = d.normalized();
+								var gg = (p2.group != null) ? p2.group : me;
+								var w = 1-data.dist/(p2.r+vm);
+								var h1 = Math.max(0, (p2.w-gg.cc.w0)*gg.cc.pressure);
+								var vT = vm*Math.abs(Math.sin(_p2.v.angle()-l.angle()));
+								var s = Math.pow(w, 2)*gg.cc.repulsion*h1*69;
+								p2.applyForce(n, -s*me.dt);
+								p2.applyForce(vd, gg.cc.u*me.dt);
+								l.obj.applyForce(vd, data.p, -gg.cc.u*me.dt);
+								l.obj.applyForce(n, data.p, s*me.dt);
+							}
+						}
+					}
+				}
+			}
+			this.getPs(ps);
 			var op = lines._sort();
 			function _fo1(data){
 				var l1 = data.obj1, l2 = data.obj2;
-				function __fp1(){
+				var obj1 = l1.obj, obj2 = l2.obj;
+				if(obj1 != obj2){
+					var points = [l1.p1, l1.p2, l2.p1, l2.p2];
+					var lines = [l1, l2];
+					for(var ip=0;ip<points.length;ip++){
+						for(var il=0;il<lines.length;il++){
+							if(points[ip].obj == lines[il]){continue;}
+							var d = lines[il].getDataOnPoint(points[ip]);
+							var l = lines[il], p = points[ip];
+							var obj1 = l.obj, obj2 = p.obj.obj;
+							var md = 3;
+							if(d.dist<md){
+								var dd = Point.sub(p, obj2.center());
+								var a1 = l.angle(), a2 = dd.angle();
+								var v1 = obj1.getVelAt(p), v2 = obj2.getVelAt(p);
+								var depth = 1-d.dist/md;
+								var wd = Math.pow(depth, 5);
+								var ddd = md-d.dist;
+								var m2 = dd.mag();
+								var mass1 = obj1.getMass(), mass2 = obj2.getMass();
+								var n = Point.sub(d.p, p).normalized();
+								var vln = Point.sub(v2[0], v1[0]).dot(n);
+								if(vln > 0){return;}
+								var j = -4*vln*ddd;
+								j /= 1/mass1 + 1/mass2;
+								obj1.v.sub(Point.scale(n, 1 / mass1 * j));
+  								obj2.v.add(Point.scale(n, 1 / mass2 * j));
+  								var pers = 0.6, slop = 0.01;
+  								var scl = Math.max(0, ddd-slop)/(1/mass1 + 1/mass2)*pers;
+  								if(!obj1.fixed) obj1.shape.sub(Point.scale(n, 1 / mass1 * scl));
+  								if(!obj2.fixed) obj2.shape.add(Point.scale(n, 1 / mass2 * scl));
+								//obj1.applyForce(n, d.p, -j);
+								//obj2.applyForce(n, p, j);
+								return;
+								var mass = obj1.getMass()+obj2.getMass();
+								var ref = v1[0];
+								var scl = mass*wd*me.dt*Math.abs(Math.sin(ref.angle()-a2));
+								obj1.applyForce(ref, d.p, -scl);
+								obj2.applyForce(ref, p, scl);
+
+								var ref = v2[0];
+								scl = mass*wd*me.dt*Math.abs(Math.cos(ref.angle()-a1));
+								obj1.applyForce(ref, d.p, scl);
+								obj2.applyForce(ref, p, -scl);
+								//
+								var ref = v1[1];
+								scl = 4*-mass*wd*me.dt*Math.abs(Math.sin(ref.angle()-a2));
+								obj1.applyForce(ref, d.p, -scl);
+								obj2.applyForce(ref, p, scl);
+
+								var ref = v2[1];
+								scl = 4*-mass*wd*me.dt*Math.abs(Math.cos(ref.angle()-a1));
+								obj1.applyForce(ref, d.p, scl);
+								obj2.applyForce(ref, p, -scl);								
+							}
+						}
+					}
 				}
-				fp1();
 			}
 			Array._sortLoop(_fo1, op);
 		}
